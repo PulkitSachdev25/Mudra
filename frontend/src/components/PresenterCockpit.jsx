@@ -7,7 +7,9 @@ import {
   Maximize2, Minimize2, LogOut, Users, Wifi, Sparkles 
 } from 'lucide-react';
 
-export default function PresenterCockpit({ roomCode, onLeave, visionState, onSlideChange }) {
+import { useMediaPipeGestures } from '../hooks/useMediaPipeGestures';
+
+export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onTriggerAirblast, onTriggerMOMSnap }) {
   const [deckType, setDeckType] = useState('sample'); // 'sample' | 'pdf'
   const [pdfDoc, setPdfDoc] = useState(null);
   const [totalPages, setTotalPages] = useState(SAMPLE_SLIDES.length);
@@ -17,18 +19,8 @@ export default function PresenterCockpit({ roomCode, onLeave, visionState, onSli
   const [airblastActive, setAirblastActive] = useState(false);
   const [activeAirblastUrl, setActiveAirblastUrl] = useState('');
 
-  // Status square state: 'red' (no hand), 'yellow' (tracking), 'green' (gesture executed)
-  const [statusColor, setStatusColor] = useState('yellow');
-
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-
-  // Sync visionState props if provided from parent or gesture hook
-  useEffect(() => {
-    if (visionState?.status) {
-      setStatusColor(visionState.status);
-    }
-  }, [visionState]);
 
   const { isConnected, audienceCount, sendMessage } = useRoomWebSocket({
     roomCode,
@@ -37,6 +29,63 @@ export default function PresenterCockpit({ roomCode, onLeave, visionState, onSli
       console.log('[PresenterCockpit] Received socket message', msg);
     }
   });
+
+  // Handle slide navigation
+  const goToSlide = useCallback((newIndex, direction = 'next') => {
+    if (newIndex < 1 || newIndex > totalPages) return;
+    setShuffleDirection(direction);
+    setCurrentSlide(newIndex);
+    sendMessage({ type: 'SLIDE_UPDATE', slide: newIndex });
+    if (onSlideChange) onSlideChange(newIndex);
+  }, [totalPages, sendMessage, onSlideChange]);
+
+  const nextSlide = useCallback(() => {
+    goToSlide(currentSlide + 1, 'next');
+  }, [currentSlide, goToSlide]);
+
+  const prevSlide = useCallback(() => {
+    goToSlide(currentSlide - 1, 'prev');
+  }, [currentSlide, goToSlide]);
+
+  // Handle AirBlast trigger
+  const handleAirblastTrigger = useCallback(() => {
+    const slide = deckType === 'sample' ? SAMPLE_SLIDES[currentSlide - 1] : null;
+    const url = slide?.link || 'https://github.com/PulkitSachdev25/Mudra';
+    setActiveAirblastUrl(url);
+    setAirblastActive(true);
+    if (onTriggerAirblast) onTriggerAirblast(url);
+
+    sendMessage({
+      type: 'AIRBLAST_URL',
+      url,
+      title: slide?.title || 'Mudrā Stage Resource'
+    });
+
+    setTimeout(() => {
+      setAirblastActive(false);
+    }, 2500);
+  }, [deckType, currentSlide, sendMessage, onTriggerAirblast]);
+
+  // Handle MOM snapshot trigger
+  const handleMOMSnapTrigger = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const imageData = canvas.toDataURL('image/jpeg', 0.92);
+    if (onTriggerMOMSnap) {
+      onTriggerMOMSnap({ slideIndex: currentSlide, imageData });
+    }
+  }, [currentSlide, onTriggerMOMSnap]);
+
+  // In-Browser MediaPipe Hand Gesture Engine
+  const { visionStatus, cameraPermission, modelLoaded, videoRef } = useMediaPipeGestures({
+    active: true,
+    onSwipeNext: nextSlide,
+    onSwipePrev: prevSlide,
+    onAirblast: handleAirblastTrigger,
+    onMOMSnap: handleMOMSnapTrigger,
+  });
+
+  const statusColor = visionStatus;
 
   // Render current slide onto canvas
   const renderCurrentSlide = useCallback(() => {
@@ -56,29 +105,6 @@ export default function PresenterCockpit({ roomCode, onLeave, visionState, onSli
   useEffect(() => {
     renderCurrentSlide();
   }, [renderCurrentSlide]);
-
-  // Handle slide navigation
-  const goToSlide = useCallback((newIndex, direction = 'next') => {
-    if (newIndex < 1 || newIndex > totalPages) return;
-    setShuffleDirection(direction);
-    setCurrentSlide(newIndex);
-    sendMessage({ type: 'SLIDE_UPDATE', slide: newIndex });
-    if (onSlideChange) onSlideChange(newIndex);
-
-    // Flash green on status square briefly
-    setStatusColor('green');
-    setTimeout(() => {
-      setStatusColor('yellow');
-    }, 450);
-  }, [totalPages, sendMessage, onSlideChange]);
-
-  const nextSlide = useCallback(() => {
-    goToSlide(currentSlide + 1, 'next');
-  }, [currentSlide, goToSlide]);
-
-  const prevSlide = useCallback(() => {
-    goToSlide(currentSlide - 1, 'prev');
-  }, [currentSlide, goToSlide]);
 
   // Keyboard navigation fallback
   useEffect(() => {
@@ -142,6 +168,15 @@ export default function PresenterCockpit({ roomCode, onLeave, visionState, onSli
       ref={containerRef}
       className="relative min-h-screen w-full bg-textured-matrix flex flex-col justify-between items-center p-4 select-none overflow-hidden"
     >
+      {/* Hidden webcam video stream for MediaPipe HandLandmarker */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        className="hidden pointer-events-none"
+      />
+
       {/* Top Header & Right Frosted Status Square */}
       <header className="z-30 w-full max-w-6xl flex items-center justify-between px-6 py-3">
         {/* Left: Minimal Logo & Room Code */}
