@@ -15,10 +15,10 @@ export function useMediaPipeGestures({
   const videoRef = useRef(null);
   const handLandmarkerRef = useRef(null);
   const animFrameRef = useRef(null);
+  const isDetectingRef = useRef(false);
 
   // Gesture state tracking
   const swipeCooldownRef = useRef(0);
-  const lastWristXRef = useRef(null);
   const wristHistoryRef = useRef([]);
 
   // AirBlast state machine (Fist -> Open Palm)
@@ -33,73 +33,32 @@ export function useMediaPipeGestures({
     setVisionStatus('green');
     setTimeout(() => {
       setVisionStatus('yellow');
-    }, 500);
+    }, 600);
   }, []);
 
-  // Initialize MediaPipe HandLandmarker
+  // 1. Initialize Webcam Stream immediately (parallel to model loading)
   useEffect(() => {
     if (!active) return;
-    let isCancelled = false;
-
-    async function initMediaPipe() {
-      try {
-        console.log('[MediaPipe] Initializing FilesetResolver...');
-        const vision = await FilesetResolver.forVisionTasks(
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
-        );
-
-        if (isCancelled) return;
-
-        console.log('[MediaPipe] Loading HandLandmarker model...');
-        const landmarker = await HandLandmarker.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-            delegate: 'GPU',
-          },
-          runningMode: 'VIDEO',
-          numHands: 1,
-          minHandDetectionConfidence: 0.6,
-          minHandPresenceConfidence: 0.6,
-          minTrackingConfidence: 0.6,
-        });
-
-        if (isCancelled) return;
-        handLandmarkerRef.current = landmarker;
-        setModelLoaded(true);
-        console.log('[MediaPipe] HandLandmarker loaded and ready.');
-      } catch (err) {
-        console.error('[MediaPipe] Failed to load HandLandmarker:', err);
-      }
-    }
-
-    initMediaPipe();
-
-    return () => {
-      isCancelled = true;
-      if (handLandmarkerRef.current) {
-        handLandmarkerRef.current.close();
-      }
-    };
-  }, [active]);
-
-  // Start webcam video stream
-  useEffect(() => {
-    if (!active || !modelLoaded) return;
     let stream = null;
 
     async function startCamera() {
       try {
+        console.log('[Camera] Requesting webcam access...');
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480, facingMode: 'user' },
+          video: {
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+            facingMode: 'user',
+          },
           audio: false,
         });
         setCameraPermission('granted');
+        console.log('[Camera] Webcam access granted.');
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () => {
-            videoRef.current.play();
-            startDetectionLoop();
+            videoRef.current.play().catch(e => console.warn('[Camera] Autoplay caught:', e));
           };
         }
       } catch (err) {
@@ -115,35 +74,103 @@ export function useMediaPipeGestures({
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
       }
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [active]);
+
+  // 2. Initialize MediaPipe HandLandmarker
+  useEffect(() => {
+    if (!active) return;
+    let isCancelled = false;
+
+    async function initMediaPipe() {
+      try {
+        console.log('[MediaPipe] Initializing FilesetResolver...');
+        const vision = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+        );
+
+        if (isCancelled) return;
+
+        console.log('[MediaPipe] Creating HandLandmarker...');
+        let landmarker;
+        try {
+          landmarker = await HandLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+              delegate: 'GPU',
+            },
+            runningMode: 'VIDEO',
+            numHands: 1,
+            minHandDetectionConfidence: 0.5,
+            minHandPresenceConfidence: 0.5,
+            minTrackingConfidence: 0.5,
+          });
+        } catch (gpuError) {
+          console.warn('[MediaPipe] GPU delegate failed, falling back to CPU:', gpuError);
+          landmarker = await HandLandmarker.createFromOptions(vision, {
+            baseOptions: {
+              modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
+              delegate: 'CPU',
+            },
+            runningMode: 'VIDEO',
+            numHands: 1,
+            minHandDetectionConfidence: 0.5,
+            minHandPresenceConfidence: 0.5,
+            minTrackingConfidence: 0.5,
+          });
+        }
+
+        if (isCancelled) return;
+        handLandmarkerRef.current = landmarker;
+        setModelLoaded(true);
+        console.log('[MediaPipe] HandLandmarker loaded successfully.');
+      } catch (err) {
+        console.error('[MediaPipe] Failed to initialize HandLandmarker:', err);
+      }
+    }
+
+    initMediaPipe();
+
+    return () => {
+      isCancelled = true;
+      if (handLandmarkerRef.current) {
+        handLandmarkerRef.current.close();
       }
     };
-  }, [active, modelLoaded]);
+  }, [active]);
 
-  // Main Detection Loop running at video frame rate
-  const startDetectionLoop = () => {
+  // 3. Start Frame-by-Frame Detection Loop
+  useEffect(() => {
+    if (!active || !modelLoaded) return;
     const video = videoRef.current;
     const landmarker = handLandmarkerRef.current;
+    if (!video || !landmarker) return;
 
     let lastVideoTime = -1;
+    isDetectingRef.current = true;
 
     const detect = () => {
-      if (video && landmarker && video.readyState >= 2) {
+      if (!isDetectingRef.current) return;
+
+      if (video.readyState >= 2) {
         const currentTime = video.currentTime;
         if (currentTime !== lastVideoTime) {
           lastVideoTime = currentTime;
           const now = performance.now();
-          const results = landmarker.detectForVideo(video, now);
+          try {
+            const results = landmarker.detectForVideo(video, now);
 
-          if (results && results.landmarks && results.landmarks.length > 0) {
-            const landmarks = results.landmarks[0];
-            processHandLandmarks(landmarks, now);
-          } else {
-            // No hand in view
-            setVisionStatus('red');
-            vPoseStartTimestampRef.current = 0;
-            wristHistoryRef.current = [];
+            if (results && results.landmarks && results.landmarks.length > 0) {
+              const landmarks = results.landmarks[0];
+              processHandLandmarks(landmarks, now);
+            } else {
+              // No hand in camera view
+              setVisionStatus((prev) => (prev === 'green' ? 'green' : 'red'));
+              vPoseStartTimestampRef.current = 0;
+              wristHistoryRef.current = [];
+            }
+          } catch (e) {
+            console.warn('[MediaPipe] Detection frame error:', e);
           }
         }
       }
@@ -151,12 +178,17 @@ export function useMediaPipeGestures({
     };
 
     animFrameRef.current = requestAnimationFrame(detect);
-  };
 
-  // Process 21 3D landmarks for our 3 classifiers
+    return () => {
+      isDetectingRef.current = false;
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
+  }, [active, modelLoaded]);
+
+  // 4. Classify Gestures from 21 3D Landmarks
   const processHandLandmarks = (landmarks, now) => {
-    // 0: Wrist, 4: Thumb tip, 8: Index tip, 12: Middle tip, 16: Ring tip, 20: Pinky tip
-    // MCP base joints: 5: Index MCP, 9: Middle MCP, 13: Ring MCP, 17: Pinky MCP
     const wrist = landmarks[0];
     const thumbTip = landmarks[4];
     const indexTip = landmarks[8];
@@ -169,35 +201,32 @@ export function useMediaPipeGestures({
     const ringMcp = landmarks[13];
     const pinkyMcp = landmarks[17];
 
-    // Default to tracking (yellow) unless a gesture fires
+    // Hand is present -> Turn yellow (or keep green if currently flashing)
     setVisionStatus((prev) => (prev === 'green' ? 'green' : 'yellow'));
 
-    // ----------------------------------------------------
-    // CLASSIFIER 1: Horizontal Swipe Navigation (0.8s cooldown)
-    // ----------------------------------------------------
+    // --- CLASSIFIER 1: Horizontal Swipe Navigation (0.8s cooldown) ---
     if (now > swipeCooldownRef.current) {
       wristHistoryRef.current.push({ x: wrist.x, time: now });
-      // Keep only last 250ms of history
-      wristHistoryRef.current = wristHistoryRef.current.filter(
-        (h) => now - h.time <= 250
-      );
+      wristHistoryRef.current = wristHistoryRef.current.filter((h) => now - h.time <= 300);
 
       if (wristHistoryRef.current.length >= 3) {
         const oldest = wristHistoryRef.current[0];
         const newest = wristHistoryRef.current[wristHistoryRef.current.length - 1];
         const deltaX = newest.x - oldest.x;
 
-        // In mirrored video: moving right (increasing x) is forward, moving left is backward
-        if (deltaX > 0.16) {
-          console.log('[Gesture] Swipe Forward detected (Next Slide)');
-          swipeCooldownRef.current = now + 800; // 0.8s cooldown
+        // In mirrored user camera:
+        // Moving right (deltaX > 0.14) -> Next Slide
+        // Moving left (deltaX < -0.14) -> Prev Slide
+        if (deltaX > 0.14) {
+          console.log('[Gesture] Swipe Forward (Next Slide)');
+          swipeCooldownRef.current = now + 800;
           wristHistoryRef.current = [];
           flashGreen();
           if (onSwipeNext) onSwipeNext();
           return;
-        } else if (deltaX < -0.16) {
-          console.log('[Gesture] Swipe Backward detected (Prev Slide)');
-          swipeCooldownRef.current = now + 800; // 0.8s cooldown
+        } else if (deltaX < -0.14) {
+          console.log('[Gesture] Swipe Backward (Prev Slide)');
+          swipeCooldownRef.current = now + 800;
           wristHistoryRef.current = [];
           flashGreen();
           if (onSwipePrev) onSwipePrev();
@@ -206,47 +235,40 @@ export function useMediaPipeGestures({
       }
     }
 
-    // ----------------------------------------------------
-    // CLASSIFIER 2: AirBlast (Fist -> Open Palm)
-    // ----------------------------------------------------
-    // Measure distance of tips to MCPs or wrist to detect curled vs extended
+    // --- CLASSIFIER 2: AirBlast (Closed Fist -> Open Palm Blast) ---
     const isIndexCurled = indexTip.y > indexMcp.y - 0.02;
     const isMiddleCurled = middleTip.y > middleMcp.y - 0.02;
     const isRingCurled = ringTip.y > ringMcp.y - 0.02;
     const isPinkyCurled = pinkyTip.y > pinkyMcp.y - 0.02;
-
     const isFist = isIndexCurled && isMiddleCurled && isRingCurled && isPinkyCurled;
 
-    const isIndexExtended = indexTip.y < indexMcp.y - 0.08;
-    const isMiddleExtended = middleTip.y < middleMcp.y - 0.08;
-    const isRingExtended = ringTip.y < ringMcp.y - 0.08;
-    const isPinkyExtended = pinkyTip.y < pinkyMcp.y - 0.08;
-
+    const isIndexExtended = indexTip.y < indexMcp.y - 0.07;
+    const isMiddleExtended = middleTip.y < middleMcp.y - 0.07;
+    const isRingExtended = ringTip.y < ringMcp.y - 0.07;
+    const isPinkyExtended = pinkyTip.y < pinkyMcp.y - 0.07;
     const isOpenPalm = isIndexExtended && isMiddleExtended && isRingExtended && isPinkyExtended;
 
     if (isFist) {
       fistArmedTimestampRef.current = now;
     } else if (isOpenPalm && now > airblastCooldownRef.current) {
-      // Check if fist was armed within the last 1.2 seconds
-      if (now - fistArmedTimestampRef.current < 1200 && fistArmedTimestampRef.current > 0) {
-        console.log('[Gesture] AirBlast triggered! (Fist to Open Palm)');
+      // If fist was armed within the last 1.5s
+      if (now - fistArmedTimestampRef.current < 1500 && fistArmedTimestampRef.current > 0) {
+        console.log('[Gesture] AirBlast Triggered!');
         fistArmedTimestampRef.current = 0;
-        airblastCooldownRef.current = now + 2000; // 2s cooldown
+        airblastCooldownRef.current = now + 2000;
         flashGreen();
         if (onAirblast) onAirblast();
         return;
       }
     }
 
-    // ----------------------------------------------------
-    // CLASSIFIER 3: Spatial MOM (Two-Finger "V" / Peace Sign Held for 1.0s)
-    // ----------------------------------------------------
-    const isVPose = 
-      isIndexExtended && 
-      isMiddleExtended && 
-      isRingCurled && 
+    // --- CLASSIFIER 3: Spatial MOM (Two-Finger "V" / Peace Sign Held for 1.0s) ---
+    const isVPose =
+      isIndexExtended &&
+      isMiddleExtended &&
+      isRingCurled &&
       isPinkyCurled &&
-      Math.abs(indexTip.x - middleTip.x) > 0.03; // Fingers separated in V
+      Math.abs(indexTip.x - middleTip.x) > 0.025;
 
     if (isVPose) {
       if (vPoseStartTimestampRef.current === 0) {
@@ -254,8 +276,8 @@ export function useMediaPipeGestures({
       } else {
         const holdDuration = now - vPoseStartTimestampRef.current;
         if (holdDuration >= 1000 && now > momSnapCooldownRef.current) {
-          console.log('[Gesture] Spatial MOM Snap triggered! (V-Hold 1.0s)');
-          momSnapCooldownRef.current = now + 3000; // 3s cooldown
+          console.log('[Gesture] Spatial MOM Snap Triggered! (V-Hold 1.0s)');
+          momSnapCooldownRef.current = now + 3000;
           vPoseStartTimestampRef.current = 0;
           flashGreen();
           if (onMOMSnap) onMOMSnap();

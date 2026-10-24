@@ -195,15 +195,28 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
             title={
               statusColor === 'green' ? 'Gesture Triggered' :
               statusColor === 'yellow' ? 'Hand Tracked & Ready' :
-              'No Hand in View'
+              'No Hand in View / Out of Frame'
             }
-            className={`w-7 h-7 rounded-lg glass-card border-2 transition-all duration-300 cursor-default ${
-              statusColor === 'green' 
-                ? 'border-emerald-400 bg-emerald-400/30 shadow-[0_0_18px_rgba(52,211,153,0.7)] scale-110' 
+            style={
+              statusColor === 'green'
+                ? {
+                    backgroundColor: '#10b981',
+                    borderColor: '#6ee7b7',
+                    boxShadow: '0 0 24px rgba(16, 185, 129, 1), 0 0 10px rgba(16, 185, 129, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.6)',
+                  }
                 : statusColor === 'yellow'
-                ? 'border-amber-400/80 bg-amber-400/15 shadow-[0_0_12px_rgba(245,158,11,0.35)]'
-                : 'border-red-500/80 bg-red-500/15 shadow-[0_0_12px_rgba(239,68,68,0.35)]'
-            }`}
+                ? {
+                    backgroundColor: '#f59e0b',
+                    borderColor: '#fde68a',
+                    boxShadow: '0 0 20px rgba(245, 158, 11, 0.95), 0 0 8px rgba(245, 158, 11, 0.7), inset 0 0 8px rgba(255, 255, 255, 0.5)',
+                  }
+                : {
+                    backgroundColor: '#ef4444',
+                    borderColor: '#fca5a5',
+                    boxShadow: '0 0 20px rgba(239, 68, 68, 0.95), 0 0 8px rgba(239, 68, 68, 0.7), inset 0 0 8px rgba(255, 255, 255, 0.5)',
+                  }
+            }
+            className="w-8 h-8 rounded-xl border-2 transition-all duration-200 cursor-default"
           />
         </div>
       </header>
