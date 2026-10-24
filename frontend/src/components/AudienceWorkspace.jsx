@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useRoomWebSocket } from '../hooks/useRoomWebSocket';
-import { LogOut, Wifi, FileDown, Layers } from 'lucide-react';
+import { LogOut, Wifi, FileDown, Layers, ExternalLink } from 'lucide-react';
 
 export default function AudienceWorkspace({ roomCode, onLeave }) {
   const [momCards, setMomCards] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(1);
+  const [pushedLinkToast, setPushedLinkToast] = useState(null);
 
   const { isConnected } = useRoomWebSocket({
     roomCode,
@@ -15,7 +16,20 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
         setCurrentSlide(msg.slide);
       } else if (msg.type === 'AIRBLAST_URL') {
         if (msg.url) {
-          window.open(msg.url, '_blank');
+          setPushedLinkToast({
+            url: msg.url,
+            title: msg.title || 'Interactive Stage Link',
+          });
+          // Auto-open in new tab
+          try {
+            window.open(msg.url, '_blank');
+          } catch (e) {
+            console.warn('Popup blocked, toast provides manual click:', e);
+          }
+          // Clear toast after 6 seconds
+          setTimeout(() => {
+            setPushedLinkToast(null);
+          }, 6000);
         }
       } else if (msg.type === 'MOM_CARD') {
         setMomCards((prev) => [msg.card, ...prev]);
@@ -54,6 +68,34 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
           </button>
         </div>
       </header>
+
+      {/* Pushed AirBlast Toast Banner */}
+      {pushedLinkToast && (
+        <div className="z-30 w-full max-w-4xl mt-4 animate-in slide-in-from-top-4 duration-300">
+          <div className="glass-panel p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-between shadow-2xl">
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
+              <div>
+                <p className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">
+                  AirBlast Received: {pushedLinkToast.title}
+                </p>
+                <p className="text-xs text-zinc-300 font-mono truncate max-w-md">
+                  {pushedLinkToast.url}
+                </p>
+              </div>
+            </div>
+            <a
+              href={pushedLinkToast.url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs tracking-wide uppercase transition-colors shrink-0 shadow-lg cursor-pointer"
+            >
+              <span>Open</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 w-full max-w-4xl flex flex-col items-center justify-center text-center my-8">
         <div className="glass-panel p-10 rounded-2xl max-w-md w-full">

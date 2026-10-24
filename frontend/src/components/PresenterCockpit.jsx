@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { useMediaPipeGestures } from '../hooks/useMediaPipeGestures';
+import { soundEngine } from '../utils/soundEffects';
 
 export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onTriggerAirblast, onTriggerMOMSnap }) {
   const [deckType, setDeckType] = useState('sample'); // 'sample' | 'pdf'
@@ -53,6 +54,10 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     const url = slide?.link || 'https://github.com/PulkitSachdev25/Mudra';
     setActiveAirblastUrl(url);
     setAirblastActive(true);
+
+    // Play pleasant audio chime
+    soundEngine.playAirblastChime();
+
     if (onTriggerAirblast) onTriggerAirblast(url);
 
     sendMessage({
@@ -63,7 +68,7 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
 
     setTimeout(() => {
       setAirblastActive(false);
-    }, 2500);
+    }, 2200);
   }, [deckType, currentSlide, sendMessage, onTriggerAirblast]);
 
   // Handle MOM snapshot trigger
