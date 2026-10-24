@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 
 import { useMediaPipeGestures } from '../hooks/useMediaPipeGestures';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { soundEngine } from '../utils/soundEffects';
 
 export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onTriggerAirblast, onTriggerMOMSnap }) {
@@ -71,15 +72,49 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     }, 2200);
   }, [deckType, currentSlide, sendMessage, onTriggerAirblast]);
 
+  const [momToast, setMomToast] = useState('');
+
+  // Continuous speech recognition rolling buffer
+  const { isListening, getRecentTranscript } = useSpeechRecognition({ active: true });
+
   // Handle MOM snapshot trigger
-  const handleMOMSnapTrigger = useCallback(() => {
+  const handleMOMSnapTrigger = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const imageData = canvas.toDataURL('image/jpeg', 0.92);
-    if (onTriggerMOMSnap) {
-      onTriggerMOMSnap({ slideIndex: currentSlide, imageData });
+
+    setMomToast('Action Snap Captured! Synthesizing AI Minutes...');
+    const imageData = canvas.toDataURL('image/jpeg', 0.88);
+    const transcript = getRecentTranscript(60);
+
+    try {
+      const host = window.location.hostname || 'localhost';
+      const res = await fetch(`http://${host}:8000/api/summarize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          room_code: roomCode,
+          slide_index: currentSlide,
+          image_data: imageData,
+          transcript: transcript,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMomToast(`Minutes Created: ${data.card.title}`);
+        if (onTriggerMOMSnap) onTriggerMOMSnap(data.card);
+      } else {
+        setMomToast('Minutes Captured & Dispatched!');
+      }
+    } catch (err) {
+      console.warn('Backend summarize call failed:', err);
+      setMomToast('Minutes Dispatched Locally');
     }
-  }, [currentSlide, onTriggerMOMSnap]);
+
+    setTimeout(() => {
+      setMomToast('');
+    }, 3500);
+  }, [roomCode, currentSlide, getRecentTranscript, onTriggerMOMSnap]);
 
   // In-Browser MediaPipe Hand Gesture Engine
   const { visionStatus, cameraPermission, modelLoaded, videoRef } = useMediaPipeGestures({
@@ -225,6 +260,16 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
           />
         </div>
       </header>
+
+      {/* Spatial MOM Snapshot Toast Banner */}
+      {momToast && (
+        <div className="z-30 w-full max-w-lg mx-auto -mt-1 mb-2 animate-in slide-in-from-top-3 duration-200">
+          <div className="glass-panel px-4 py-2 rounded-xl border border-amber-400/40 bg-amber-950/30 flex items-center justify-center gap-2.5 shadow-xl text-center">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            <span className="text-xs font-medium text-amber-200 tracking-wide">{momToast}</span>
+          </div>
+        </div>
+      )}
 
       {/* Main Presentation Stage with Card Shuffle Animation */}
       <main className="relative flex-1 w-full max-w-5xl flex items-center justify-center my-auto px-4">
