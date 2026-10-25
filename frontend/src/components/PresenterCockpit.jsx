@@ -330,9 +330,9 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
             style={
               statusColor === 'green'
                 ? {
-                    backgroundColor: '#38bdf8',
-                    borderColor: '#7dd3fc',
-                    boxShadow: '0 0 24px rgba(56, 189, 248, 1), 0 0 10px rgba(56, 189, 248, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.6)',
+                    backgroundColor: '#10b981',
+                    borderColor: '#6ee7b7',
+                    boxShadow: '0 0 24px rgba(16, 185, 129, 1), 0 0 10px rgba(16, 185, 129, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.6)',
                   }
                 : statusColor === 'yellow'
                 ? {

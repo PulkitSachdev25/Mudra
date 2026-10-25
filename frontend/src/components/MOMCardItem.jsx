@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { CheckSquare, MessageSquare, Clock, Sparkles, ExternalLink } from 'lucide-react';
+import { CheckSquare, MessageSquare, Clock, ExternalLink } from 'lucide-react';
 
 export default function MOMCardItem({
   card,
@@ -137,14 +137,14 @@ export default function MOMCardItem({
     return (
       <div className="glass-panel p-6 rounded-2xl w-full border border-sky-400/30 shadow-[0_0_24px_rgba(56,189,248,0.12)] animate-in slide-in-from-bottom-5 duration-300">
         <div className="flex items-center justify-between pb-4 border-b border-white/5 mb-4">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2.5 flex-wrap">
             {cardNumber !== undefined && (
               <span className={`px-2 py-0.5 rounded-md font-mono text-xs font-bold border ${
                 isLatest
                   ? 'bg-sky-500/20 text-sky-300 border-sky-400/50'
                   : 'bg-white/10 text-zinc-300 border-white/20'
               }`}>
-                Card #{cardNumber}
+                {cardNumber}
               </span>
             )}
             <span className="text-sm font-semibold text-white tracking-wide">
@@ -209,23 +209,20 @@ export default function MOMCardItem({
 
   return (
     <div className="glass-panel p-6 rounded-2xl w-full border border-white/10 shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
-      {/* Card Header: Timestamp & Slide Badge */}
+      {/* Card Header: Number, Title & Timestamp */}
       <div className="flex items-center justify-between pb-4 border-b border-white/5 mb-4">
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
           {cardNumber !== undefined && (
-            <span className={`px-2 py-0.5 rounded-md font-mono text-xs font-bold border ${
+            <span className={`px-2.5 py-0.5 rounded-md font-mono text-xs font-bold border ${
               isLatest
                 ? 'bg-sky-500/20 text-sky-300 border-sky-400/50'
                 : 'bg-white/10 text-zinc-300 border-white/20'
             }`}>
-              Card #{cardNumber}
+              {cardNumber}
             </span>
           )}
-          <span className="px-2.5 py-1 rounded-md bg-white/10 text-white font-mono text-xs font-semibold">
-            Slide #{card.slide_index}
-          </span>
           <span className="text-sm font-semibold text-white tracking-wide">
-            {card.title}
+            {card.title?.replace(/^Slide\s*\d+\s*(Spatial MOM|:)?\s*/i, '').trim() || card.title || 'Discussion Takeaways'}
           </span>
         </div>
 
@@ -271,9 +268,8 @@ export default function MOMCardItem({
           <div className="space-y-4">
             {/* Core Takeaway */}
             <div className="glass-card p-3.5 rounded-xl border border-white/5">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300 mb-1">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>Core Takeaway</span>
+              <div className="text-xs font-semibold text-zinc-300 mb-1">
+                Core Takeaway
               </div>
               <p className="text-xs text-zinc-300 leading-relaxed">
                 {card.takeaway}

@@ -62,8 +62,8 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    const cardHeaderTitle = card.type === 'link' ? 'Link Incoming' : (card.title || `Slide #${card.slide_index}`);
-    doc.text(`Card #${i + 1} | ${cardHeaderTitle}`, margin + 12, currentY + 20);
+    const cardHeaderTitle = card.type === 'link' ? 'Link Incoming' : (card.title?.replace(/^Slide\s*\d+\s*(Spatial MOM|:)?\s*/i, '').trim() || card.title || 'Discussion Takeaways');
+    doc.text(`${i + 1} | ${cardHeaderTitle}`, margin + 12, currentY + 20);
 
     doc.setTextColor(148, 163, 184);
     doc.setFontSize(9);

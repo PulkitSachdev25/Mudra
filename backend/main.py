@@ -272,7 +272,7 @@ Return ONLY valid JSON matching this structure:
         if transcript_text:
             first_sentence = transcript_text.split('.')[0]
             summary_data = {
-                "title": f"Slide {req.slide_index}: Key Decision",
+                "title": "Key Decision & Takeaway",
                 "takeaway": first_sentence if len(first_sentence) > 10 else f"Crucial insights discussed for Slide {req.slide_index}.",
                 "action_items": [
                     "Implement the discussed pipeline parameters",
@@ -281,7 +281,7 @@ Return ONLY valid JSON matching this structure:
             }
         else:
             summary_data = {
-                "title": f"Slide {req.slide_index} Spatial MOM",
+                "title": "Discussion Summary",
                 "takeaway": f"Recorded discussion point on Slide {req.slide_index}.",
                 "action_items": [
                     "Follow up on presentation action items",
