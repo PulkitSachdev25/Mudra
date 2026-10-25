@@ -30,30 +30,52 @@ export default function MOMCardItem({
     };
   }, [card.image_data]);
 
+  // Coordinate extraction helper supporting both Mouse and Mobile Touch events
+  const getCoordinates = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
+    let clientX = e.clientX;
+    let clientY = e.clientY;
+
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if (e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    }
+
+    if (clientX === undefined || clientY === undefined) return null;
+
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
+  };
+
   // Drawing event handlers
   const startDrawing = (e) => {
     if (activeTool === 'none') return;
+    if (e.cancelable && e.type.startsWith('touch')) e.preventDefault();
     isDrawingRef.current = true;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const scaleX = canvasRef.current.width / rect.width;
-    const scaleY = canvasRef.current.height / rect.height;
-    lastPointRef.current = {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    };
+    const coords = getCoordinates(e);
+    if (coords) {
+      lastPointRef.current = coords;
+    }
   };
 
   const draw = (e) => {
     if (!isDrawingRef.current || !lastPointRef.current) return;
+    if (e.cancelable && e.type.startsWith('touch')) e.preventDefault();
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const currentPoint = {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    };
+    const currentPoint = getCoordinates(e);
+    if (!currentPoint) return;
 
     ctx.beginPath();
     ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
@@ -82,8 +104,9 @@ export default function MOMCardItem({
     lastPointRef.current = currentPoint;
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e) => {
     if (!isDrawingRef.current) return;
+    if (e && e.cancelable && e.type.startsWith('touch')) e.preventDefault();
     isDrawingRef.current = false;
     lastPointRef.current = null;
     if (onUpdateAnnotation && canvasRef.current) {
@@ -137,8 +160,13 @@ export default function MOMCardItem({
               onMouseMove={draw}
               onMouseUp={stopDrawing}
               onMouseLeave={stopDrawing}
+              onTouchStart={startDrawing}
+              onTouchMove={draw}
+              onTouchEnd={stopDrawing}
+              onTouchCancel={stopDrawing}
+              style={{ touchAction: activeTool !== 'none' ? 'none' : 'auto' }}
               className={`w-full h-full object-contain ${
-                activeTool !== 'none' ? 'cursor-crosshair' : 'cursor-default'
+                activeTool !== 'none' ? 'cursor-crosshair touch-none' : 'cursor-default'
               }`}
             />
             {activeTool !== 'none' && (

@@ -10,6 +10,7 @@ export default defineConfig({
   ],
   server: {
     host: true,
+    allowedHosts: true,
     proxy: {
       '/ws': {
         target: 'http://localhost:8000',
