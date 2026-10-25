@@ -173,12 +173,30 @@ async def websocket_endpoint(websocket: WebSocket, room_code: str, client_type: 
 
                 elif msg_type == "AIRBLAST_URL":
                     url = payload.get("url", "")
-                    title = payload.get("title", "Resource")
+                    title = payload.get("title", "Stage Resource")
+                    slide_index = payload.get("slide_index", 1)
                     logger.info(f"AirBlast dispatched for room {room_code}: {url}")
+                    card_id = f"link_{int(datetime.now().timestamp() * 1000)}"
+                    timestamp_str = datetime.now().strftime("%H:%M:%S")
+                    link_card = {
+                        "id": card_id,
+                        "type": "link",
+                        "slide_index": slide_index,
+                        "title": title or "Stage Resource Link",
+                        "url": url,
+                        "timestamp": timestamp_str,
+                        "takeaway": f"Presenter pushed interactive resource link for Slide #{slide_index}.",
+                        "action_items": [f"Explore link: {url}"]
+                    }
+                    if room_code in manager.rooms:
+                        manager.rooms[room_code]["mom_cards"].append(link_card)
+
                     await manager.broadcast_to_audience(room_code, {
                         "type": "AIRBLAST_URL",
                         "url": url,
-                        "title": title
+                        "title": title,
+                        "slide_index": slide_index,
+                        "link_card": link_card
                     })
 
                 elif msg_type == "MOM_CARD":

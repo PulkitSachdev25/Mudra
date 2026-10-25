@@ -31,21 +31,50 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
             url: msg.url,
             title: msg.title || 'Interactive Stage Link',
           });
-          // Auto-open in new tab per user requirement
+
+          // Guaranteed new tab open via unique target and fallback anchor click
           try {
-            window.open(msg.url, '_blank');
+            const uniqueTarget = `_mudra_tab_${Date.now()}`;
+            const opened = window.open(msg.url, uniqueTarget, 'noopener,noreferrer');
+            if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+              const a = document.createElement('a');
+              a.href = msg.url;
+              a.target = '_blank';
+              a.rel = 'noopener noreferrer';
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }
           } catch (e) {
             console.warn('Popup blocked, toast provides manual click:', e);
           }
+
+          // Add link card to MoM cards in chronological order
+          const linkCard = msg.link_card || {
+            id: `link_${Date.now()}`,
+            type: 'link',
+            slide_index: msg.slide_index || currentSlide,
+            title: msg.title || 'Stage Resource Link',
+            url: msg.url,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            takeaway: `Presenter pushed interactive resource link for Slide #${msg.slide_index || currentSlide}.`,
+            action_items: [`Open resource: ${msg.url}`],
+          };
+
+          setMomCards((prev) => {
+            if (prev.some((c) => c.id === linkCard.id)) return prev;
+            return [...prev, linkCard]; // Append in chronological order
+          });
+
           setTimeout(() => {
             setPushedLinkToast(null);
           }, 6000);
         }
       } else if (msg.type === 'MOM_CARD') {
         setMomCards((prev) => {
-          // Avoid duplicate card IDs
+          // Avoid duplicate card IDs, append in chronological order
           if (prev.some((c) => c.id === msg.card.id)) return prev;
-          return [msg.card, ...prev];
+          return [...prev, msg.card];
         });
       } else if (msg.type === 'INIT_STATE') {
         if (msg.current_slide) setCurrentSlide(msg.current_slide);

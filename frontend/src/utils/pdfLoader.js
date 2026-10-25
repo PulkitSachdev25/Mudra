@@ -136,6 +136,41 @@ export function renderSampleSlideToCanvas(slide, canvas) {
   }
 }
 
+export async function extractFirstLinkFromPdfPage(pdfDoc, pageNum) {
+  if (!pdfDoc) return null;
+  try {
+    const page = await pdfDoc.getPage(pageNum);
+
+    // 1. Check native PDF link annotations
+    const annotations = await page.getAnnotations();
+    if (annotations && annotations.length > 0) {
+      for (const annot of annotations) {
+        if (annot.subtype === 'Link' && annot.url) {
+          return annot.url;
+        }
+      }
+    }
+
+    // 2. Scan text content for raw URLs (http, https, www)
+    const textContent = await page.getTextContent();
+    if (textContent && textContent.items) {
+      const fullText = textContent.items.map((item) => item.str).join(' ');
+      const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/i;
+      const match = fullText.match(urlRegex);
+      if (match) {
+        let found = match[0].replace(/[.,;:)]+$/, ''); // Strip trailing punctuation
+        if (found.toLowerCase().startsWith('www.')) {
+          found = 'https://' + found;
+        }
+        return found;
+      }
+    }
+  } catch (err) {
+    console.warn('[PDF] Could not inspect link on page', pageNum, err);
+  }
+  return null;
+}
+
 export function extractCanvasSnapshot(canvas) {
   if (!canvas) return null;
   return canvas.toDataURL('image/jpeg', 0.92);

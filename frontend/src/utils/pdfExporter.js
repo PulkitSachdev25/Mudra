@@ -71,8 +71,32 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
 
     currentY += 42;
 
-    // Slide Image Snapshot
-    if (annotatedImage) {
+    // Slide Image Snapshot or Resource Link Card
+    if (card.type === 'link' || (!annotatedImage && card.url)) {
+      doc.setFillColor(6, 78, 59); // Emerald-900
+      doc.roundedRect(margin, currentY, contentWidth, 54, 4, 4, 'F');
+
+      doc.setTextColor(52, 211, 153); // Emerald-400
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DISPATCHED STAGE RESOURCE URL:', margin + 12, currentY + 18);
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.setFont('courier', 'bold');
+      doc.text(card.url || '', margin + 12, currentY + 38);
+
+      currentY += 66;
+
+      if (card.takeaway) {
+        doc.setTextColor(203, 213, 225);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const takeawayLines = doc.splitTextToSize(card.takeaway, contentWidth);
+        doc.text(takeawayLines, margin, currentY);
+        currentY += takeawayLines.length * 12 + 8;
+      }
+    } else if (annotatedImage) {
       try {
         const imgWidth = contentWidth * 0.55;
         const imgHeight = (imgWidth * 9) / 16;

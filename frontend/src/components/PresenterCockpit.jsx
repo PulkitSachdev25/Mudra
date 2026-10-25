@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRoomWebSocket } from '../hooks/useRoomWebSocket';
 import { SAMPLE_SLIDES } from '../utils/sampleDeck';
-import { renderSampleSlideToCanvas, renderPdfPageToCanvas, loadPdfDocument } from '../utils/pdfLoader';
+import { renderSampleSlideToCanvas, renderPdfPageToCanvas, loadPdfDocument, extractFirstLinkFromPdfPage } from '../utils/pdfLoader';
 import { 
   ChevronLeft, ChevronRight, Upload, Presentation, 
   Maximize2, Minimize2, LogOut, Users, Wifi, Sparkles 
@@ -20,6 +20,8 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [airblastActive, setAirblastActive] = useState(false);
   const [activeAirblastUrl, setActiveAirblastUrl] = useState('');
+  const [currentLink, setCurrentLink] = useState(null);
+  const currentLinkRef = useRef(null);
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -75,12 +77,22 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     }
   }, [sendMessage, onSlideChange]);
 
-  // Handle AirBlast trigger (clean non-blocking toast, no screen freeze)
+  // Handle AirBlast trigger (clean non-blocking toast, dynamically dispatches active slide link)
   const handleAirblastTrigger = useCallback(() => {
     const cur = currentSlideRef.current;
-    const slide = deckTypeRef.current === 'sample' ? SAMPLE_SLIDES[cur - 1] : null;
-    const url = slide?.link || 'https://github.com/PulkitSachdev25/Mudra';
-    setActiveAirblastUrl(url);
+    const activeUrl = currentLinkRef.current;
+
+    if (!activeUrl) {
+      console.log(`[AirBlast] No link detected on slide ${cur}`);
+      setActiveAirblastUrl(`No Link Detected on Slide #${cur}`);
+      setAirblastActive(true);
+      setTimeout(() => {
+        setAirblastActive(false);
+      }, 2000);
+      return;
+    }
+
+    setActiveAirblastUrl(activeUrl);
     setAirblastActive(true);
 
     try {
@@ -89,17 +101,22 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
       console.warn('Audio chime warning:', e);
     }
 
+    const slideTitle = deckTypeRef.current === 'sample' 
+      ? (SAMPLE_SLIDES[cur - 1]?.title || `Slide ${cur}`)
+      : `Slide ${cur}`;
+
     sendMessage({
       type: 'AIRBLAST_URL',
-      url,
-      title: slide?.title || 'Mudrā Stage Resource',
+      url: activeUrl,
+      title: slideTitle,
+      slide_index: cur,
     });
 
-    if (onTriggerAirblast) onTriggerAirblast(url);
+    if (onTriggerAirblast) onTriggerAirblast(activeUrl);
 
     setTimeout(() => {
       setAirblastActive(false);
-    }, 2200);
+    }, 2500);
   }, [sendMessage, onTriggerAirblast]);
 
   const [momToast, setMomToast] = useState('');
@@ -227,10 +244,27 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     }
   };
 
-  // Determine current active link on slide (if any) for AirBlast
-  const currentLink = deckType === 'sample' 
-    ? SAMPLE_SLIDES[currentSlide - 1]?.link 
-    : null;
+  // Automatically scan the active slide for hyperlinks (supports both PDF documents and sample keynote)
+  useEffect(() => {
+    let isCancelled = false;
+    async function updateActiveLink() {
+      let link = null;
+      if (deckType === 'sample') {
+        const slide = SAMPLE_SLIDES[currentSlide - 1];
+        link = slide?.link || null;
+      } else if (deckType === 'pdf' && pdfDoc) {
+        link = await extractFirstLinkFromPdfPage(pdfDoc, currentSlide);
+      }
+      if (!isCancelled) {
+        setCurrentLink(link);
+        currentLinkRef.current = link;
+      }
+    }
+    updateActiveLink();
+    return () => {
+      isCancelled = true;
+    };
+  }, [deckType, pdfDoc, currentSlide]);
 
   return (
     <div 
@@ -311,10 +345,14 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
       {/* AirBlast Dispatched Toast Banner (Non-blocking, never freezes screen) */}
       {airblastActive && (
         <div className="z-30 w-full max-w-lg mx-auto -mt-1 mb-2 animate-in slide-in-from-top-3 duration-200">
-          <div className="glass-panel px-4 py-2 rounded-xl border border-emerald-400/50 bg-emerald-950/40 flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(16,185,129,0.3)] text-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-            <span className="text-xs font-medium text-emerald-200 tracking-wide">
-              AirBlast: Link Broadcasted to Audience ({activeAirblastUrl})
+          <div className={`glass-panel px-4 py-2 rounded-xl border flex items-center justify-center gap-2.5 text-center ${
+            activeAirblastUrl.startsWith('No Link')
+              ? 'border-amber-400/50 bg-amber-950/40 shadow-[0_0_25px_rgba(245,158,11,0.3)]'
+              : 'border-emerald-400/50 bg-emerald-950/40 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
+          }`}>
+            <span className={`w-2.5 h-2.5 rounded-full ${activeAirblastUrl.startsWith('No Link') ? 'bg-amber-400' : 'bg-emerald-400'} animate-ping`}></span>
+            <span className={`text-xs font-medium tracking-wide ${activeAirblastUrl.startsWith('No Link') ? 'text-amber-200' : 'text-emerald-200'}`}>
+              {activeAirblastUrl.startsWith('No Link') ? activeAirblastUrl : `AirBlast: Link Broadcasted to Audience (${activeAirblastUrl})`}
             </span>
           </div>
         </div>
