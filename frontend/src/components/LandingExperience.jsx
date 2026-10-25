@@ -103,30 +103,30 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
               introStarted ? 'opacity-0' : 'opacity-100'
             }`}
             style={{
-              transitionDelay: introStarted ? '1.4s' : '0s'
+              transitionDelay: introStarted ? '3.0s' : '0s'
             }}
           >
             <div className="relative w-full h-[360px] sm:h-[400px] flex items-center justify-center">
-              {/* Left Hand - Glides gracefully to the left */}
+              {/* Left Hand - Glides gracefully to the left at half speed (4.8s) */}
               <img
                 src="/god_valley_left.png"
                 alt="Mudra Left Hand"
                 style={{
                   transform: introStarted ? 'translateX(-120vw) rotate(-6deg)' : 'translateX(0) rotate(0)',
                   opacity: introStarted ? 0 : 1,
-                  transition: 'transform 2.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.0s ease',
+                  transition: 'transform 4.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 4.0s ease',
                 }}
                 className="absolute inset-0 w-full h-full object-contain filter drop-shadow-[0_20px_50px_rgba(14,165,233,0.35)] select-none"
               />
 
-              {/* Right Hand - Glides gracefully to the right */}
+              {/* Right Hand - Glides gracefully to the right at half speed (4.8s) */}
               <img
                 src="/god_valley_right.png"
                 alt="Mudra Right Hand"
                 style={{
                   transform: introStarted ? 'translateX(120vw) rotate(6deg)' : 'translateX(0) rotate(0)',
                   opacity: introStarted ? 0 : 1,
-                  transition: 'transform 2.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.0s ease',
+                  transition: 'transform 4.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 4.0s ease',
                 }}
                 className="absolute inset-0 w-full h-full object-contain filter drop-shadow-[0_20px_50px_rgba(14,165,233,0.35)] select-none"
               />
@@ -139,7 +139,7 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
               transform: introStarted ? 'translateY(0)' : 'translateY(160px)',
               opacity: introStarted ? 1 : 0,
               pointerEvents: introStarted ? 'auto' : 'none',
-              transition: 'transform 2.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.9s ease',
+              transition: 'transform 4.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 3.8s ease',
             }}
             className="w-full grid grid-cols-1 md:grid-cols-2 gap-6"
           >
