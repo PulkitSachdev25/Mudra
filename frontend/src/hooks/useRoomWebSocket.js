@@ -14,12 +14,13 @@ export function useRoomWebSocket({ roomCode, clientType, onMessage }) {
   const connect = useCallback(() => {
     if (!roomCode) return;
 
-    // Use current host so phones/other laptops on the LAN connect seamlessly
-    const host = window.location.hostname || 'localhost';
+    // Use current origin (host:port, e.g. 192.168.1.36:5173) proxied through Vite.
+    // This allows mobile phones and other devices on LAN to connect without Windows Firewall port 8000 blocking or SSL errors!
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${host}:8000/ws/${roomCode}/${clientType}`;
+    const proxyWsUrl = `${protocol}//${window.location.host}/ws/${roomCode}/${clientType}`;
 
-    const ws = new WebSocket(wsUrl);
+    console.log(`[WebSocket] Connecting to room ${roomCode} as ${clientType} via ${proxyWsUrl}`);
+    const ws = new WebSocket(proxyWsUrl);
     socketRef.current = ws;
 
     ws.onopen = () => {

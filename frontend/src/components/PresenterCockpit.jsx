@@ -117,8 +117,7 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     const transcript = getRecentTranscript(60);
 
     try {
-      const host = window.location.hostname || 'localhost';
-      const res = await fetch(`http://${host}:8000/api/summarize`, {
+      const res = await fetch('/api/summarize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -12,8 +12,7 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
     setIsCreatingRoom(true);
     setErrorMsg('');
     try {
-      const host = window.location.hostname || 'localhost';
-      const res = await fetch(`http://${host}:8000/api/rooms`, {
+      const res = await fetch('/api/rooms', {
         method: 'POST',
       });
       if (!res.ok) throw new Error('Could not create room');
