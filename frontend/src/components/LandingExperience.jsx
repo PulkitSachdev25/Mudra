@@ -151,41 +151,42 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
             </p>
 
             <div className="space-y-4">
-              {/* Swipe Gesture */}
+              {/* Left & Right Palm Open Nav */}
               <div className="glass-card p-4 rounded-xl flex items-start gap-3.5">
                 <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0 mt-0.5">
                   <Hand className="w-4 h-4 text-zinc-300" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-white">Slide Navigation (Swipe)</h4>
-                  <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
-                    Wave an open hand horizontally across the webcam frame (Right-to-Left for next slide, Left-to-Right for previous). Has a 0.8s cooldown to avoid accidental double-skips.
-                  </p>
+                  <h4 className="text-sm font-semibold text-white">Slide Navigation (Open Palms)</h4>
+                  <ul className="text-xs text-zinc-400 mt-1 space-y-1">
+                    <li><strong className="text-white">Right Palm Open:</strong> Advance to Next Slide</li>
+                    <li><strong className="text-white">Left Palm Open:</strong> Rewind to Previous Slide</li>
+                  </ul>
                 </div>
               </div>
 
-              {/* AirBlast Gesture */}
+              {/* Fist Closed AirBlast */}
               <div className="glass-card p-4 rounded-xl flex items-start gap-3.5">
                 <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0 mt-0.5">
                   <Share2 className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-white">AirBlast (Link Push)</h4>
+                  <h4 className="text-sm font-semibold text-white">AirBlast Link Push (Closed Fist)</h4>
                   <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
-                    Make a <strong>closed fist</strong> to grab the link from the slide, then <strong>open your palm flat facing the camera</strong>. A chime sounds and the link immediately opens on all audience screens.
+                    Make a <strong className="text-white">closed fist</strong>. A pleasant chime rings out, the target link is captured, and all audience screens immediately redirect to the link.
                   </p>
                 </div>
               </div>
 
-              {/* Spatial MOM Gesture */}
+              {/* Peace Sign Spatial MOM */}
               <div className="glass-card p-4 rounded-xl flex items-start gap-3.5">
                 <div className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white shrink-0 mt-0.5">
                   <Camera className="w-4 h-4 text-amber-400" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-white">Spatial MOM (Action Snap)</h4>
+                  <h4 className="text-sm font-semibold text-white">Spatial MOM (Peace Sign)</h4>
                   <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
-                    Hold a <strong>two-finger "V" peace sign</strong> for 1.0 second. Takes a lossless snapshot of the slide, gathers speech transcript, and generates Gemini AI meeting minutes for the audience.
+                    Hold up a <strong className="text-white">Peace Sign (2 fingers: index & middle)</strong>. Mudrā freezes the slide canvas and transcribes recent speech to stream Gemini AI meeting minutes.
                   </p>
                 </div>
               </div>

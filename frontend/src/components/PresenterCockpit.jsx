@@ -214,7 +214,15 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
         autoPlay
         playsInline
         muted
-        className="hidden pointer-events-none"
+        style={{
+          position: 'fixed',
+          top: -9999,
+          left: -9999,
+          width: 640,
+          height: 480,
+          opacity: 0,
+          pointerEvents: 'none',
+        }}
       />
 
       {/* Top Header & Right Frosted Status Square */}
