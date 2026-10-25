@@ -3,6 +3,8 @@ import { CheckSquare, MessageSquare, Clock, Sparkles, ExternalLink } from 'lucid
 
 export default function MOMCardItem({
   card,
+  cardNumber,
+  isLatest,
   activeTool, // 'pen' | 'highlighter' | 'eraser' | 'none'
   activeColor, // hex color
   onUpdateAnnotation, // callback with card.id, drawingData, userNote
@@ -135,7 +137,16 @@ export default function MOMCardItem({
     return (
       <div className="glass-panel p-6 rounded-2xl w-full border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.15)] animate-in slide-in-from-bottom-5 duration-300">
         <div className="flex items-center justify-between pb-4 border-b border-white/5 mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {cardNumber !== undefined && (
+              <span className={`px-2 py-0.5 rounded-md font-mono text-xs font-bold border ${
+                isLatest
+                  ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                  : 'bg-white/10 text-zinc-300 border-white/20'
+              }`}>
+                Card #{cardNumber}{isLatest ? ' • Latest' : ''}
+              </span>
+            )}
             <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-400 font-mono text-xs font-semibold border border-emerald-500/30">
               Slide #{card.slide_index} • AirBlast Link
             </span>
@@ -204,7 +215,16 @@ export default function MOMCardItem({
     <div className="glass-panel p-6 rounded-2xl w-full border border-white/10 shadow-2xl animate-in slide-in-from-bottom-5 duration-300">
       {/* Card Header: Timestamp & Slide Badge */}
       <div className="flex items-center justify-between pb-4 border-b border-white/5 mb-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {cardNumber !== undefined && (
+            <span className={`px-2 py-0.5 rounded-md font-mono text-xs font-bold border ${
+              isLatest
+                ? 'bg-sky-500/30 text-sky-300 border-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.4)]'
+                : 'bg-white/10 text-zinc-300 border-white/20'
+            }`}>
+              Card #{cardNumber}{isLatest ? ' • Latest' : ''}
+            </span>
+          )}
           <span className="px-2.5 py-1 rounded-md bg-white/10 text-white font-mono text-xs font-semibold">
             Slide #{card.slide_index}
           </span>

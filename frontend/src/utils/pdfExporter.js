@@ -62,7 +62,8 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Slide #${card.slide_index} • ${card.title}`, margin + 12, currentY + 20);
+    const cardTypeLabel = card.type === 'link' ? 'Resource Link' : `Slide #${card.slide_index}`;
+    doc.text(`Card #${i + 1} • ${cardTypeLabel} • ${card.title}`, margin + 12, currentY + 20);
 
     doc.setTextColor(148, 163, 184);
     doc.setFontSize(9);

@@ -1,22 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRoomWebSocket } from '../hooks/useRoomWebSocket';
 import MOMCardItem from './MOMCardItem';
 import { exportMinutesToPDF } from '../utils/pdfExporter';
+import { soundEngine } from '../utils/soundEffects';
 import { 
   LogOut, Wifi, FileDown, Layers, ExternalLink, 
-  PenTool, Highlighter, Eraser, MousePointer 
+  PenTool, Highlighter, Eraser, MousePointer, Sparkles 
 } from 'lucide-react';
 
 export default function AudienceWorkspace({ roomCode, onLeave }) {
   const [momCards, setMomCards] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(1);
   const [pushedLinkToast, setPushedLinkToast] = useState(null);
+  const [popupsTested, setPopupsTested] = useState(false);
 
   // Annotation Toolbar State
   const [activeTool, setActiveTool] = useState('none'); // 'none' | 'pen' | 'highlighter' | 'eraser'
   const [activeColor, setActiveColor] = useState('#38bdf8');
   const [annotationsMap, setAnnotationsMap] = useState({}); // card.id -> { imageData, note }
   const [isExporting, setIsExporting] = useState(false);
+
+  // Helper to open a URL in a new window/tab
+  const openUrlInNewWindow = (url) => {
+    let opened = null;
+    try {
+      // Modern window.open targeting _blank
+      opened = window.open(url, '_blank');
+      if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+        // Fallback programmatic anchor click
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (e) {
+      console.warn('[AirBlast] window.open failed:', e);
+    }
+    return opened;
+  };
 
   const { isConnected } = useRoomWebSocket({
     roomCode,
@@ -32,24 +56,29 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
             title: msg.title || 'Interactive Stage Link',
           });
 
-          // Guaranteed new tab open via unique target and fallback anchor click
+          // Play audio notification chime
           try {
-            const uniqueTarget = `_mudra_tab_${Date.now()}`;
-            const opened = window.open(msg.url, uniqueTarget, 'noopener,noreferrer');
-            if (!opened || opened.closed || typeof opened.closed === 'undefined') {
-              const a = document.createElement('a');
-              a.href = msg.url;
-              a.target = '_blank';
-              a.rel = 'noopener noreferrer';
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-            }
+            soundEngine.playAirblastChime();
           } catch (e) {
-            console.warn('Popup blocked, toast provides manual click:', e);
+            console.warn('Audio chime warning:', e);
           }
 
-          // Add link card to MoM cards in chronological order
+          // 1. Immediate attempt to auto-open in a new window
+          const win = openUrlInNewWindow(msg.url);
+
+          // 2. High-priority capturing interaction listener:
+          // If the browser popup blocker throttled background WebSocket popups,
+          // the audience member's very next screen touch/click carries trusted user activation
+          // and immediately opens the URL in a new window!
+          const handleCapturingTapToOpen = () => {
+            window.open(msg.url, '_blank');
+            window.removeEventListener('click', handleCapturingTapToOpen, true);
+            window.removeEventListener('touchend', handleCapturingTapToOpen, true);
+          };
+          window.addEventListener('click', handleCapturingTapToOpen, { capture: true, once: true });
+          window.addEventListener('touchend', handleCapturingTapToOpen, { capture: true, once: true });
+
+          // Add link card to MoM cards in chronological order (FIFO in storage, LIFO on screen)
           const linkCard = msg.link_card || {
             id: `link_${Date.now()}`,
             type: 'link',
@@ -68,7 +97,7 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
 
           setTimeout(() => {
             setPushedLinkToast(null);
-          }, 6000);
+          }, 8000);
         }
       } else if (msg.type === 'MOM_CARD') {
         setMomCards((prev) => {
@@ -131,6 +160,29 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
             <Wifi className={`w-3.5 h-3.5 ${isConnected ? 'text-emerald-400' : 'text-zinc-500'}`} />
             <span>{isConnected ? 'Stage Live' : 'Connecting...'}</span>
           </div>
+
+          {/* Quick Pop-up Auto-Open Activator */}
+          <button
+            onClick={() => {
+              const testWin = window.open('about:blank', '_blank');
+              if (testWin && !testWin.closed) {
+                testWin.close();
+                setPopupsTested(true);
+                alert('Auto-Window pop-ups are active and enabled! Stage links will pop open automatically in a new window.');
+              } else {
+                alert('Pop-ups are currently blocked by your browser.\n\nTo allow stage links to auto-open in a new window:\n1. Look at the right side of your address bar for the "Pop-up blocked" icon.\n2. Click it and select "Always allow pop-ups and redirects from this site".\n3. Click Done!');
+              }
+            }}
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all cursor-pointer ${
+              popupsTested 
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+                : 'glass-card text-zinc-400 hover:text-white border-white/10'
+            }`}
+            title="Click to verify or enable browser auto-popups for this site"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+            <span>{popupsTested ? 'Auto-Open Ready' : 'Enable Auto-Popups'}</span>
+          </button>
 
           {/* Sticky Download as a PDF Button */}
           <button
@@ -263,15 +315,21 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
           </div>
         ) : (
           <div className="w-full space-y-6">
-            {momCards.map((card) => (
-              <MOMCardItem
-                key={card.id}
-                card={card}
-                activeTool={activeTool}
-                activeColor={activeColor}
-                onUpdateAnnotation={handleUpdateAnnotation}
-              />
-            ))}
+            {/* LIFO on screen: newest card on top so it's easy to make and view minutes! */}
+            {[...momCards].reverse().map((card, idx) => {
+              const cardNumber = momCards.length - idx;
+              return (
+                <MOMCardItem
+                  key={card.id}
+                  card={card}
+                  cardNumber={cardNumber}
+                  isLatest={idx === 0}
+                  activeTool={activeTool}
+                  activeColor={activeColor}
+                  onUpdateAnnotation={handleUpdateAnnotation}
+                />
+              );
+            })}
           </div>
         )}
       </main>
