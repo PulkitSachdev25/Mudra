@@ -9,6 +9,7 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [introStarted, setIntroStarted] = useState(false);
+  const [curtainDismissed, setCurtainDismissed] = useState(false);
 
   // Preload hand cliff assets
   useEffect(() => {
@@ -27,6 +28,9 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
     } catch (e) {
       console.warn('Intro sound error:', e);
     }
+    setTimeout(() => {
+      setCurtainDismissed(true);
+    }, 4200);
   };
 
   const handleCreateHost = async () => {
@@ -68,10 +72,81 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
       {/* Interactive Finger Trail Canvas Overlay */}
       <FingerTrailCanvas />
 
-      {/* Top Bar with Info Button on Right */}
-      <div className={`z-30 w-full max-w-5xl flex justify-end items-center pt-2 transition-opacity duration-700 ${
-        introStarted ? 'opacity-100' : 'opacity-40'
-      }`}>
+      {/* Full-Screen God Valley Parting Curtain Overlay */}
+      {!curtainDismissed && (
+        <div
+          className={`fixed inset-0 z-40 flex flex-col items-center justify-between p-6 overflow-hidden pointer-events-none transition-opacity duration-[1200ms] ${
+            introStarted ? 'opacity-0 delay-[2500ms]' : 'bg-[#060709]'
+          }`}
+        >
+          {/* Subtle Ambient Spotlight behind Hands */}
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,rgba(14,165,233,0.18),transparent_70%)] pointer-events-none" />
+
+          {/* Top subtle marker */}
+          <div className="z-10 w-full max-w-5xl flex justify-between items-center opacity-30 pt-2 font-mono text-[11px] text-zinc-400 uppercase tracking-widest">
+            <span>Spatial Engine</span>
+            <span>Zero-Touch Gesture Stage</span>
+          </div>
+
+          {/* Central Full-Screen Hands Container */}
+          <div className="relative w-full max-w-5xl h-[65vh] sm:h-[75vh] my-auto flex items-center justify-center overflow-visible select-none">
+            {/* Left Hand / Rock Tower */}
+            <img
+              src="/god_valley_left.png"
+              alt="God Valley Left"
+              style={{
+                transform: introStarted ? 'translateX(-125vw) rotate(-5deg)' : 'translateX(0) rotate(0)',
+                opacity: introStarted ? 0 : 1,
+                transition: 'transform 3.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 3.2s ease',
+              }}
+              className="absolute inset-0 w-full h-full object-contain filter drop-shadow-[0_25px_60px_rgba(14,165,233,0.4)]"
+            />
+
+            {/* Right Hand / Rock Tower */}
+            <img
+              src="/god_valley_right.png"
+              alt="God Valley Right"
+              style={{
+                transform: introStarted ? 'translateX(125vw) rotate(5deg)' : 'translateX(0) rotate(0)',
+                opacity: introStarted ? 0 : 1,
+                transition: 'transform 3.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 3.2s ease',
+              }}
+              className="absolute inset-0 w-full h-full object-contain filter drop-shadow-[0_25px_60px_rgba(14,165,233,0.4)]"
+            />
+          </div>
+
+          {/* Bottom Floating Pulsing Prompt */}
+          {!introStarted ? (
+            <div className="z-10 flex flex-col items-center gap-2 pb-6 animate-pulse">
+              <span className="text-xs font-mono uppercase tracking-[0.35em] text-zinc-300">
+                Click anywhere to enter
+              </span>
+              <div className="w-16 h-0.5 rounded-full bg-gradient-to-r from-transparent via-cyan-400 to-transparent" />
+            </div>
+          ) : (
+            <div className="h-10" />
+          )}
+        </div>
+      )}
+
+      {/* Telemetry HUD / Top Bar - Unveiled smoothly as curtain parts */}
+      <div 
+        style={{
+          transform: introStarted ? 'translateY(0)' : 'translateY(-40px)',
+          opacity: introStarted ? 1 : 0,
+          transition: 'transform 3.0s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.4s ease',
+        }}
+        className="z-30 w-full max-w-5xl flex justify-between items-center pt-2"
+      >
+        {/* Left Telemetry HUD Badge */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl glass-panel border border-white/10 text-xs text-zinc-300 font-mono shadow-md">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span className="font-semibold text-white tracking-wider">MUDRĀ OS</span>
+          <span className="text-zinc-500">•</span>
+          <span className="text-zinc-400 hidden sm:inline">Vision Core Ready</span>
+        </div>
+
+        {/* Right Info Button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -84,149 +159,109 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
         </button>
       </div>
 
-      {/* Center Hero: MUDRA Title stays right here while hands part and cards scroll up */}
-      <main className="z-20 w-full max-w-4xl flex flex-col items-center text-center my-auto py-4">
-        {/* Big Bold Centered Title - STAYS RIGHT HERE */}
+      {/* Dashboard Main Content: MUDRĀ Logo and Host/Join Cards - Rising smoothly from underneath */}
+      <main 
+        style={{
+          transform: introStarted ? 'translateY(0) scale(1)' : 'translateY(120px) scale(0.96)',
+          opacity: introStarted ? 1 : 0,
+          pointerEvents: introStarted ? 'auto' : 'none',
+          transition: 'transform 3.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.6s ease',
+        }}
+        className="z-20 w-full max-w-4xl flex flex-col items-center text-center my-auto py-6"
+      >
+        {/* Big Bold Centered Title */}
         <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tight text-white mb-2 uppercase drop-shadow-2xl">
           MUDRĀ
         </h1>
 
-        <p className="text-sm md:text-base text-zinc-400 font-medium tracking-[0.2em] uppercase max-w-md mb-8">
+        <p className="text-sm md:text-base text-zinc-400 font-medium tracking-[0.2em] uppercase max-w-md mb-10">
           Spatial Presentation & Stage Bridge
         </p>
 
-        {/* Central Stage: Hands Part Slowly while Dual Cards Scroll Up */}
-        <div className="relative w-full max-w-2xl flex flex-col items-center justify-center min-h-[360px] sm:min-h-[400px]">
-          {/* The Hands / God Valley Rock Towers */}
-          <div
-            className={`absolute inset-0 flex items-center justify-center overflow-visible pointer-events-none transition-opacity duration-1000 ${
-              introStarted ? 'opacity-0' : 'opacity-100'
-            }`}
-            style={{
-              transitionDelay: introStarted ? '3.0s' : '0s'
-            }}
-          >
-            <div className="relative w-full h-[360px] sm:h-[400px] flex items-center justify-center">
-              {/* Left Hand - Glides gracefully to the left at half speed (4.8s) */}
-              <img
-                src="/god_valley_left.png"
-                alt="Mudra Left Hand"
-                style={{
-                  transform: introStarted ? 'translateX(-120vw) rotate(-6deg)' : 'translateX(0) rotate(0)',
-                  opacity: introStarted ? 0 : 1,
-                  transition: 'transform 4.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 4.0s ease',
-                }}
-                className="absolute inset-0 w-full h-full object-contain filter drop-shadow-[0_20px_50px_rgba(14,165,233,0.35)] select-none"
-              />
-
-              {/* Right Hand - Glides gracefully to the right at half speed (4.8s) */}
-              <img
-                src="/god_valley_right.png"
-                alt="Mudra Right Hand"
-                style={{
-                  transform: introStarted ? 'translateX(120vw) rotate(6deg)' : 'translateX(0) rotate(0)',
-                  opacity: introStarted ? 0 : 1,
-                  transition: 'transform 4.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 4.0s ease',
-                }}
-                className="absolute inset-0 w-full h-full object-contain filter drop-shadow-[0_20px_50px_rgba(14,165,233,0.35)] select-none"
-              />
+        {/* Dual Card Container: Host & Audience */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+          {/* Host Card */}
+          <div className="glass-panel p-7 rounded-2xl flex flex-col justify-between text-left group hover:border-white/20 transition-all duration-200">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-105 transition-transform">
+                <Presentation className="w-5 h-5 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-white tracking-wide">Host Presentation</h2>
+              <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                Launch the Presenter Cockpit, drop in your PDF keynote, and control the stage with zero-touch spatial hand gestures.
+              </p>
             </div>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCreateHost();
+              }}
+              disabled={isCreatingRoom}
+              className="mt-8 w-full py-3.5 px-4 rounded-xl bg-white text-black font-semibold text-xs tracking-wider uppercase hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl disabled:opacity-50"
+            >
+              <span>{isCreatingRoom ? 'Creating Room...' : 'Start Session'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Dual Card Container: Host & Audience - Scrolls up smoothly from below */}
-          <div
-            style={{
-              transform: introStarted ? 'translateY(0)' : 'translateY(160px)',
-              opacity: introStarted ? 1 : 0,
-              pointerEvents: introStarted ? 'auto' : 'none',
-              transition: 'transform 4.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 3.8s ease',
-            }}
-            className="w-full grid grid-cols-1 md:grid-cols-2 gap-6"
-          >
-            {/* Host Card */}
-            <div className="glass-panel p-7 rounded-2xl flex flex-col justify-between text-left group hover:border-white/20 transition-all duration-200">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-105 transition-transform">
-                  <Presentation className="w-5 h-5 text-white" />
-                </div>
-                <h2 className="text-xl font-bold text-white tracking-wide">Host Presentation</h2>
-                <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                  Launch the Presenter Cockpit, drop in your PDF keynote, and control the stage with zero-touch spatial hand gestures.
-                </p>
+          {/* Join Audience Card */}
+          <div className="glass-panel p-7 rounded-2xl flex flex-col justify-between text-left group hover:border-white/20 transition-all duration-200">
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-105 transition-transform">
+                <Users className="w-5 h-5 text-white" />
               </div>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCreateHost();
-                }}
-                disabled={isCreatingRoom}
-                className="mt-8 w-full py-3.5 px-4 rounded-xl bg-white text-black font-semibold text-xs tracking-wider uppercase hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl disabled:opacity-50"
-              >
-                <span>{isCreatingRoom ? 'Creating Room...' : 'Start Session'}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <h2 className="text-xl font-bold text-white tracking-wide">Join as Audience</h2>
+              <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                Pair your screen using the 4-digit stage code to receive live pushed links and annotate real-time meeting minutes.
+              </p>
             </div>
 
-            {/* Join Audience Card */}
-            <div className="glass-panel p-7 rounded-2xl flex flex-col justify-between text-left group hover:border-white/20 transition-all duration-200">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-105 transition-transform">
-                  <Users className="w-5 h-5 text-white" />
-                </div>
-                <h2 className="text-xl font-bold text-white tracking-wide">Join as Audience</h2>
-                <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                  Pair your screen using the 4-digit stage code to receive live pushed links and annotate real-time meeting minutes.
-                </p>
+            <form 
+              onSubmit={(e) => {
+                e.stopPropagation();
+                handleJoin(e);
+              }} 
+              onClick={(e) => e.stopPropagation()}
+              className="mt-8 flex flex-col gap-2"
+            >
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  maxLength={4}
+                  value={audienceCode}
+                  onChange={(e) => setAudienceCode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="4-digit code"
+                  className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-center text-sm font-mono tracking-widest text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                />
+                <button
+                  type="submit"
+                  className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold text-xs tracking-wider uppercase active:scale-[0.98] transition-all cursor-pointer"
+                >
+                  Join
+                </button>
               </div>
-
-              <form 
-                onSubmit={(e) => {
-                  e.stopPropagation();
-                  handleJoin(e);
-                }} 
-                onClick={(e) => e.stopPropagation()}
-                className="mt-8 flex flex-col gap-2"
-              >
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    maxLength={4}
-                    value={audienceCode}
-                    onChange={(e) => setAudienceCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="4-digit code"
-                    className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-center text-sm font-mono tracking-widest text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
-                  />
-                  <button
-                    type="submit"
-                    className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold text-xs tracking-wider uppercase active:scale-[0.98] transition-all cursor-pointer"
-                  >
-                    Join
-                  </button>
-                </div>
-                {errorMsg && (
-                  <p className="text-[11px] text-red-400 px-1">{errorMsg}</p>
-                )}
-              </form>
-            </div>
+              {errorMsg && (
+                <p className="text-[11px] text-red-400 px-1">{errorMsg}</p>
+              )}
+            </form>
           </div>
         </div>
-
-        {/* Pulsing Hint before user clicks */}
-        {!introStarted && (
-          <div className="mt-8 flex flex-col items-center gap-2 animate-pulse">
-            <span className="text-xs font-mono uppercase tracking-[0.3em] text-zinc-400">
-              Click anywhere to enter
-            </span>
-            <div className="w-12 h-0.5 rounded-full bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-          </div>
-        )}
       </main>
 
-      {/* Minimal Footer */}
-      <footer className="z-20 text-[11px] text-zinc-600 tracking-wider uppercase font-mono">
+      {/* Minimal Footer - Unveiled smoothly */}
+      <footer 
+        style={{
+          transform: introStarted ? 'translateY(0)' : 'translateY(40px)',
+          opacity: introStarted ? 1 : 0,
+          transition: 'transform 3.0s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.4s ease',
+        }}
+        className="z-20 text-[11px] text-zinc-600 tracking-wider uppercase font-mono"
+      >
         MUDRĀ • BROWSER-NATIVE SPATIAL BRIDGE
       </footer>
+
+
 
       {/* Info Modal ('i' Button Trigger) */}
       {showInfoModal && (

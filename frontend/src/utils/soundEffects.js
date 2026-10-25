@@ -61,14 +61,14 @@ class SoundEngine {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(70, now);
-      osc.frequency.exponentialRampToValueAtTime(320, now + 1.8);
+      osc.frequency.setValueAtTime(65, now);
+      osc.frequency.exponentialRampToValueAtTime(320, now + 2.2);
       gain.gain.setValueAtTime(0.25, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 2.6);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 3.2);
       osc.connect(gain);
       gain.connect(this.ctx.destination);
       osc.start(now);
-      osc.stop(now + 2.6);
+      osc.stop(now + 3.2);
     } catch (err) {
       console.warn('Intro sound failed:', err);
     }
