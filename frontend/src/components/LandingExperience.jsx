@@ -48,26 +48,10 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
     onJoinAudience(clean);
   };
 
-  const mudraCharacters = ['M', 'U', 'D', 'R', 'Ā'];
-
   return (
     <div className="relative min-h-screen w-full bg-[#060709] flex flex-col items-center justify-between p-6 select-none overflow-hidden">
-      {/* Top Bar with Logo on Left and Info Button on Right */}
-      <div className="z-30 w-full max-w-5xl flex justify-between items-center pt-2">
-        {/* Top-Left Mudrā Hand-M Lettermark */}
-        <div className="relative group flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-zinc-950/80 border border-zinc-800 hover:border-zinc-600 transition-all cursor-default shadow-lg">
-          <CornerCrosshairs />
-          <img 
-            src="/mudra_logo_transparent.png" 
-            alt="Mudrā Logo" 
-            className="h-6 sm:h-7 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
-          />
-          <span className="font-mono text-[11px] tracking-widest text-zinc-300 uppercase font-semibold hidden sm:inline">
-            MUDRĀ
-          </span>
-        </div>
-
-        {/* Top-Right Info Button */}
+      {/* Top Bar with Info Button on Right */}
+      <div className="z-30 w-full max-w-5xl flex justify-end items-center pt-2">
         <button
           onClick={() => setShowInfoModal(true)}
           className="relative w-10 h-10 rounded-xl bg-zinc-950/80 border border-zinc-800 hover:border-zinc-500 flex items-center justify-center text-zinc-300 hover:text-white active:scale-95 transition-all cursor-pointer shadow-lg"
@@ -80,9 +64,22 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
 
       {/* Main Content: MUDRĀ Title & Industrial Cards */}
       <main className="z-20 w-full max-w-4xl flex flex-col items-center text-center my-auto py-8">
-        {/* Title: Each Individual Character Inverts on Hover without Scrambling */}
+        {/* Title: Hand-M Logo + U D R Ā, Each Individual Character Inverts on Hover */}
         <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tight text-white mb-3 uppercase drop-shadow-2xl flex items-center justify-center gap-1 sm:gap-2">
-          {mudraCharacters.map((char, idx) => (
+          {/* Artistic Hands Letter 'M' */}
+          <span
+            className="inline-flex items-center justify-center transition-all duration-150 hover:bg-white px-1 sm:px-2 rounded-sm cursor-pointer select-none group"
+            title="Letter M (Mudrā Hands)"
+          >
+            <img 
+              src="/mudra_logo_transparent.png" 
+              alt="M" 
+              className="h-[0.78em] w-auto object-contain transition-all duration-150 group-hover:invert"
+            />
+          </span>
+
+          {/* U D R Ā */}
+          {['U', 'D', 'R', 'Ā'].map((char, idx) => (
             <span
               key={idx}
               className="inline-block transition-colors duration-150 hover:bg-white hover:text-black px-1.5 sm:px-2.5 rounded-sm cursor-pointer select-none"
