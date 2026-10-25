@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Presentation, Users, ArrowRight, Info, X, Hand, Share2, Camera } from 'lucide-react';
+import { Presentation, Users, ArrowRight, Info, X, Hand, Share2, Camera, Sparkles } from 'lucide-react';
 import FingerTrailCanvas from './FingerTrailCanvas';
+import CinematicIntro from './CinematicIntro';
 
 export default function LandingExperience({ onStartHost, onJoinAudience }) {
   const [audienceCode, setAudienceCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
 
   const handleCreateHost = async () => {
     setIsCreatingRoom(true);
@@ -39,11 +41,23 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
 
   return (
     <div className="relative min-h-screen w-full bg-textured-matrix flex flex-col items-center justify-between p-6 select-none overflow-hidden">
+      {/* Cinematic God Valley Entrance Overlay */}
+      {showIntro && <CinematicIntro onComplete={() => setShowIntro(false)} />}
+
       {/* Interactive Finger Trail Canvas Overlay */}
       <FingerTrailCanvas />
 
-      {/* Top Bar with Info Button on Right */}
-      <div className="z-30 w-full max-w-5xl flex justify-end items-center pt-2">
+      {/* Top Bar with Replay Intro and Info Buttons on Right */}
+      <div className="z-30 w-full max-w-5xl flex justify-end items-center gap-2 pt-2">
+        <button
+          onClick={() => setShowIntro(true)}
+          className="px-3 h-10 rounded-xl glass-panel flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white hover:border-white/25 active:scale-95 transition-all cursor-pointer shadow-lg"
+          title="Replay God Valley Intro"
+        >
+          <Sparkles className="w-4 h-4 text-amber-400" />
+          <span className="hidden sm:inline font-mono">Replay Intro</span>
+        </button>
+
         <button
           onClick={() => setShowInfoModal(true)}
           className="w-10 h-10 rounded-xl glass-panel flex items-center justify-center text-zinc-300 hover:text-white hover:border-white/25 active:scale-95 transition-all cursor-pointer shadow-lg"
