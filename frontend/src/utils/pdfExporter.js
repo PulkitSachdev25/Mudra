@@ -33,7 +33,7 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
 
   doc.setFontSize(10);
   doc.setTextColor(100, 116, 139);
-  doc.text(`Room #${roomCode} • Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, margin, 115);
+  doc.text(`Room #${roomCode} | Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, margin, 115);
 
   doc.setDrawColor(255, 255, 255, 0.1);
   doc.setLineWidth(1);
@@ -62,8 +62,8 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    const cardTypeLabel = card.type === 'link' ? 'Resource Link' : `Slide #${card.slide_index}`;
-    doc.text(`Card #${i + 1} • ${cardTypeLabel} • ${card.title}`, margin + 12, currentY + 20);
+    const cardHeaderTitle = card.type === 'link' ? 'Link Incoming' : (card.title || `Slide #${card.slide_index}`);
+    doc.text(`Card #${i + 1} | ${cardHeaderTitle}`, margin + 12, currentY + 20);
 
     doc.setTextColor(148, 163, 184);
     doc.setFontSize(9);
@@ -74,10 +74,10 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
 
     // Slide Image Snapshot or Resource Link Card
     if (card.type === 'link' || (!annotatedImage && card.url)) {
-      doc.setFillColor(6, 78, 59); // Emerald-900
+      doc.setFillColor(12, 74, 110); // Sky-900 (Solid Light Blue tint)
       doc.roundedRect(margin, currentY, contentWidth, 54, 4, 4, 'F');
 
-      doc.setTextColor(52, 211, 153); // Emerald-400
+      doc.setTextColor(56, 189, 248); // Sky-400 (Solid Light Blue)
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.text('DISPATCHED STAGE RESOURCE URL:', margin + 12, currentY + 18);
@@ -122,7 +122,7 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
         textY += takeawayLines.length * 12 + 10;
 
         if (card.action_items && card.action_items.length > 0) {
-          doc.setTextColor(16, 185, 129); // Emerald
+          doc.setTextColor(56, 189, 248); // Sky-400 (Solid Light Blue)
           doc.setFontSize(10);
           doc.setFont('helvetica', 'bold');
           doc.text('ACTION ITEMS', textX, textY);
@@ -132,7 +132,7 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
           doc.setFontSize(8.5);
           doc.setFont('helvetica', 'normal');
           card.action_items.forEach((item) => {
-            const itemLines = doc.splitTextToSize(`• ${item}`, textWidth);
+            const itemLines = doc.splitTextToSize(`- ${item}`, textWidth);
             doc.text(itemLines, textX, textY);
             textY += itemLines.length * 11 + 4;
           });

@@ -135,23 +135,20 @@ export default function MOMCardItem({
   // Dedicated render layout for AirBlast Resource Link Cards
   if (card.type === 'link' || (!card.image_data && card.url)) {
     return (
-      <div className="glass-panel p-6 rounded-2xl w-full border border-emerald-500/30 shadow-[0_0_30px_rgba(16,185,129,0.15)] animate-in slide-in-from-bottom-5 duration-300">
+      <div className="glass-panel p-6 rounded-2xl w-full border border-sky-400/30 shadow-[0_0_24px_rgba(56,189,248,0.12)] animate-in slide-in-from-bottom-5 duration-300">
         <div className="flex items-center justify-between pb-4 border-b border-white/5 mb-4">
           <div className="flex items-center gap-2 flex-wrap">
             {cardNumber !== undefined && (
               <span className={`px-2 py-0.5 rounded-md font-mono text-xs font-bold border ${
                 isLatest
-                  ? 'bg-emerald-500/30 text-emerald-300 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                  ? 'bg-sky-500/20 text-sky-300 border-sky-400/50'
                   : 'bg-white/10 text-zinc-300 border-white/20'
               }`}>
-                Card #{cardNumber}{isLatest ? ' • Latest' : ''}
+                Card #{cardNumber}
               </span>
             )}
-            <span className="px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-400 font-mono text-xs font-semibold border border-emerald-500/30">
-              Slide #{card.slide_index} • AirBlast Link
-            </span>
             <span className="text-sm font-semibold text-white tracking-wide">
-              {card.title}
+              Link Incoming
             </span>
           </div>
 
@@ -163,18 +160,18 @@ export default function MOMCardItem({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
           {/* Left: Interactive Resource Box */}
-          <div className="flex flex-col justify-center p-6 rounded-xl bg-emerald-950/20 border border-emerald-500/20 space-y-3">
-            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-emerald-400">
+          <div className="flex flex-col justify-center p-6 rounded-xl bg-sky-950/20 border border-sky-400/20 space-y-3">
+            <span className="text-[11px] font-mono font-semibold uppercase tracking-wider text-sky-400">
               Dispatched Stage Resource
             </span>
             <a
               href={card.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between px-4 py-3 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 transition-all font-mono text-xs break-all group cursor-pointer shadow-lg"
+              className="flex items-center justify-between px-4 py-3 rounded-xl bg-sky-400/10 hover:bg-sky-400/20 text-sky-200 border border-sky-400/30 transition-all font-mono text-xs break-all group cursor-pointer shadow-lg"
             >
               <span className="truncate mr-2">{card.url}</span>
-              <ExternalLink className="w-4 h-4 shrink-0 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <ExternalLink className="w-4 h-4 shrink-0 text-sky-400 group-hover:scale-110 transition-transform" />
             </a>
             <p className="text-[11px] text-zinc-400">
               Click to open directly in a new tab anytime.
@@ -185,7 +182,6 @@ export default function MOMCardItem({
           <div className="flex flex-col justify-between space-y-4">
             <div className="glass-card p-3.5 rounded-xl border border-white/5">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300 mb-1">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
                 <span>Context</span>
               </div>
               <p className="text-xs text-zinc-300 leading-relaxed">
@@ -195,14 +191,14 @@ export default function MOMCardItem({
 
             <div className="glass-card p-3 rounded-xl border border-white/5">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-400 mb-1.5">
-                <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+                <MessageSquare className="w-3.5 h-3.5 text-sky-400" />
                 <span>Your Notes on this Link</span>
               </div>
               <textarea
                 value={userNote}
                 onChange={handleNoteChange}
                 placeholder="Type any personal notes or follow-ups for this link..."
-                className="w-full h-16 bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500/50 resize-none font-sans"
+                className="w-full h-16 bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-sky-400/50 resize-none font-sans"
               />
             </div>
           </div>
@@ -219,10 +215,10 @@ export default function MOMCardItem({
           {cardNumber !== undefined && (
             <span className={`px-2 py-0.5 rounded-md font-mono text-xs font-bold border ${
               isLatest
-                ? 'bg-sky-500/30 text-sky-300 border-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.4)]'
+                ? 'bg-sky-500/20 text-sky-300 border-sky-400/50'
                 : 'bg-white/10 text-zinc-300 border-white/20'
             }`}>
-              Card #{cardNumber}{isLatest ? ' • Latest' : ''}
+              Card #{cardNumber}
             </span>
           )}
           <span className="px-2.5 py-1 rounded-md bg-white/10 text-white font-mono text-xs font-semibold">
@@ -288,13 +284,13 @@ export default function MOMCardItem({
             {card.action_items && card.action_items.length > 0 && (
               <div className="glass-card p-3.5 rounded-xl border border-white/5">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300 mb-2">
-                  <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                  <CheckSquare className="w-3.5 h-3.5 text-sky-400" />
                   <span>Action Items</span>
                 </div>
                 <ul className="space-y-1.5 text-xs text-zinc-300">
                   {card.action_items.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 mt-1.5"></span>
+                      <span className="text-sky-400 font-mono shrink-0 select-none">-</span>
                       <span>{item}</span>
                     </li>
                   ))}

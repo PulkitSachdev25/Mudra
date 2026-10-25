@@ -52,7 +52,7 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
         if (msg.url) {
           setPushedLinkToast({
             url: msg.url,
-            title: msg.title || 'Interactive Stage Link',
+            title: 'Link Incoming',
           });
 
           // Play audio notification chime
@@ -84,7 +84,7 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
             id: `link_${Date.now()}`,
             type: 'link',
             slide_index: msg.slide_index || currentSlide,
-            title: msg.title || 'Stage Resource Link',
+            title: 'Link Incoming',
             url: msg.url,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             takeaway: `Presenter pushed interactive resource link for Slide #${msg.slide_index || currentSlide}.`,
@@ -180,12 +180,12 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
       {/* Pushed AirBlast Toast Banner */}
       {pushedLinkToast && (
         <div className="z-30 w-full max-w-5xl mt-3 animate-in slide-in-from-top-4 duration-300">
-          <div className="glass-panel p-4 rounded-xl border border-emerald-500/40 bg-emerald-950/40 flex items-center justify-between shadow-2xl">
+          <div className="glass-panel p-4 rounded-xl border border-sky-400/40 bg-sky-950/40 flex items-center justify-between shadow-2xl">
             <div className="flex items-center gap-3">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
+              <ExternalLink className="w-4 h-4 text-sky-400 shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-emerald-300 uppercase tracking-wider">
-                  AirBlast Received: {pushedLinkToast.title}
+                <p className="text-xs font-semibold text-sky-300 uppercase tracking-wider">
+                  AirBlast: {pushedLinkToast.title}
                 </p>
                 <p className="text-xs text-zinc-300 font-mono truncate max-w-md">
                   {pushedLinkToast.url}
@@ -196,7 +196,7 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
               href={pushedLinkToast.url}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-xs tracking-wide uppercase transition-colors shrink-0 shadow-lg cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-sky-400 hover:bg-sky-300 text-black font-semibold text-xs tracking-wide uppercase transition-colors shrink-0 shadow-lg cursor-pointer"
             >
               <span>Open Link</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -309,7 +309,7 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
 
       {/* Footer */}
       <footer className="z-20 text-[11px] text-zinc-500 tracking-wide mt-6">
-        Mudrā Audience Stream • Live Annotations & Instant PDF Export
+        Mudrā Audience Stream | Live Annotations & Instant PDF Export
       </footer>
     </div>
   );

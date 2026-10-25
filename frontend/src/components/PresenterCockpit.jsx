@@ -330,9 +330,9 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
             style={
               statusColor === 'green'
                 ? {
-                    backgroundColor: '#10b981',
-                    borderColor: '#6ee7b7',
-                    boxShadow: '0 0 24px rgba(16, 185, 129, 1), 0 0 10px rgba(16, 185, 129, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.6)',
+                    backgroundColor: '#38bdf8',
+                    borderColor: '#7dd3fc',
+                    boxShadow: '0 0 24px rgba(56, 189, 248, 1), 0 0 10px rgba(56, 189, 248, 0.8), inset 0 0 8px rgba(255, 255, 255, 0.6)',
                   }
                 : statusColor === 'yellow'
                 ? {
@@ -367,10 +367,10 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
           <div className={`glass-panel px-4 py-2 rounded-xl border flex items-center justify-center gap-2.5 text-center ${
             activeAirblastUrl.startsWith('No Link')
               ? 'border-amber-400/50 bg-amber-950/40 shadow-[0_0_25px_rgba(245,158,11,0.3)]'
-              : 'border-emerald-400/50 bg-emerald-950/40 shadow-[0_0_25px_rgba(16,185,129,0.3)]'
+              : 'border-sky-400/50 bg-sky-950/40 shadow-[0_0_25px_rgba(56,189,248,0.3)]'
           }`}>
-            <span className={`w-2.5 h-2.5 rounded-full ${activeAirblastUrl.startsWith('No Link') ? 'bg-amber-400' : 'bg-emerald-400'} animate-ping`}></span>
-            <span className={`text-xs font-medium tracking-wide ${activeAirblastUrl.startsWith('No Link') ? 'text-amber-200' : 'text-emerald-200'}`}>
+            <span className={`w-2.5 h-2.5 rounded-full ${activeAirblastUrl.startsWith('No Link') ? 'bg-amber-400' : 'bg-sky-400'} animate-ping`}></span>
+            <span className={`text-xs font-medium tracking-wide ${activeAirblastUrl.startsWith('No Link') ? 'text-amber-200' : 'text-sky-200'}`}>
               {activeAirblastUrl.startsWith('No Link') ? activeAirblastUrl : `AirBlast: Link Broadcasted to Audience (${activeAirblastUrl})`}
             </span>
           </div>
@@ -383,7 +383,7 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
         <div 
           className={`relative w-full max-h-[75vh] aspect-[16/9] glass-panel rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border transition-all duration-300 ${
             airblastActive 
-              ? 'border-emerald-500/60 shadow-[0_0_50px_rgba(16,185,129,0.3)]' 
+              ? 'border-sky-400/60 shadow-[0_0_50px_rgba(56,189,248,0.3)]' 
               : 'border-white/10'
           } ${
             shuffleDirection === 'next' ? 'slide-shuffle-next' : 'slide-shuffle-prev'
