@@ -32,45 +32,75 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     }
   });
 
-  // Handle slide navigation
-  const goToSlide = useCallback((newIndex, direction = 'next') => {
-    if (newIndex < 1 || newIndex > totalPages) return;
-    setShuffleDirection(direction);
-    setCurrentSlide(newIndex);
-    sendMessage({ type: 'SLIDE_UPDATE', slide: newIndex });
-    if (onSlideChange) onSlideChange(newIndex);
-  }, [totalPages, sendMessage, onSlideChange]);
+  // Persistent refs to prevent stale closure bugs in continuous animation frames
+  const currentSlideRef = useRef(1);
+  const totalPagesRef = useRef(totalPages);
+  const deckTypeRef = useRef(deckType);
 
+  useEffect(() => {
+    currentSlideRef.current = currentSlide;
+  }, [currentSlide]);
+
+  useEffect(() => {
+    totalPagesRef.current = totalPages;
+  }, [totalPages]);
+
+  useEffect(() => {
+    deckTypeRef.current = deckType;
+  }, [deckType]);
+
+  // Synchronous, crisp slide navigation
   const nextSlide = useCallback(() => {
-    goToSlide(currentSlide + 1, 'next');
-  }, [currentSlide, goToSlide]);
+    const cur = currentSlideRef.current;
+    const max = totalPagesRef.current;
+    if (cur < max) {
+      const target = cur + 1;
+      currentSlideRef.current = target;
+      setCurrentSlide(target);
+      setShuffleDirection('next');
+      sendMessage({ type: 'SLIDE_UPDATE', slide: target });
+      if (onSlideChange) onSlideChange(target);
+    }
+  }, [sendMessage, onSlideChange]);
 
   const prevSlide = useCallback(() => {
-    goToSlide(currentSlide - 1, 'prev');
-  }, [currentSlide, goToSlide]);
+    const cur = currentSlideRef.current;
+    if (cur > 1) {
+      const target = cur - 1;
+      currentSlideRef.current = target;
+      setCurrentSlide(target);
+      setShuffleDirection('prev');
+      sendMessage({ type: 'SLIDE_UPDATE', slide: target });
+      if (onSlideChange) onSlideChange(target);
+    }
+  }, [sendMessage, onSlideChange]);
 
-  // Handle AirBlast trigger
+  // Handle AirBlast trigger (clean non-blocking toast, no screen freeze)
   const handleAirblastTrigger = useCallback(() => {
-    const slide = deckType === 'sample' ? SAMPLE_SLIDES[currentSlide - 1] : null;
+    const cur = currentSlideRef.current;
+    const slide = deckTypeRef.current === 'sample' ? SAMPLE_SLIDES[cur - 1] : null;
     const url = slide?.link || 'https://github.com/PulkitSachdev25/Mudra';
     setActiveAirblastUrl(url);
     setAirblastActive(true);
 
-    // Play pleasant audio chime
-    soundEngine.playAirblastChime();
-
-    if (onTriggerAirblast) onTriggerAirblast(url);
+    try {
+      soundEngine.playAirblastChime();
+    } catch (e) {
+      console.warn('Audio chime warning:', e);
+    }
 
     sendMessage({
       type: 'AIRBLAST_URL',
       url,
-      title: slide?.title || 'Mudrā Stage Resource'
+      title: slide?.title || 'Mudrā Stage Resource',
     });
+
+    if (onTriggerAirblast) onTriggerAirblast(url);
 
     setTimeout(() => {
       setAirblastActive(false);
     }, 2200);
-  }, [deckType, currentSlide, sendMessage, onTriggerAirblast]);
+  }, [sendMessage, onTriggerAirblast]);
 
   const [momToast, setMomToast] = useState('');
 
@@ -117,7 +147,7 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
   }, [roomCode, currentSlide, getRecentTranscript, onTriggerMOMSnap]);
 
   // In-Browser MediaPipe Hand Gesture Engine
-  const { visionStatus, cameraPermission, modelLoaded, videoRef } = useMediaPipeGestures({
+  const { visionStatus, cameraPermission, modelLoaded, detectedGestureLabel, videoRef } = useMediaPipeGestures({
     active: true,
     onSwipeNext: nextSlide,
     onSwipePrev: prevSlide,
@@ -279,24 +309,27 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
         </div>
       )}
 
+      {/* AirBlast Dispatched Toast Banner (Non-blocking, never freezes screen) */}
+      {airblastActive && (
+        <div className="z-30 w-full max-w-lg mx-auto -mt-1 mb-2 animate-in slide-in-from-top-3 duration-200">
+          <div className="glass-panel px-4 py-2 rounded-xl border border-emerald-400/50 bg-emerald-950/40 flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(16,185,129,0.3)] text-center">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span className="text-xs font-medium text-emerald-200 tracking-wide">
+              AirBlast: Link Broadcasted to Audience ({activeAirblastUrl})
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Main Presentation Stage with Card Shuffle Animation */}
       <main className="relative flex-1 w-full max-w-5xl flex items-center justify-center my-auto px-4">
-        {/* AirBlast Cinematic Focus Spotlight / Blur */}
-        {airblastActive && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-300 rounded-3xl p-8">
-            <div className="glass-panel p-8 rounded-2xl max-w-md w-full text-center border-emerald-500/40 shadow-[0_0_50px_rgba(16,185,129,0.3)] animate-in fade-in zoom-in-95 duration-200">
-              <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
-                AirBlast Active
-              </span>
-              <h3 className="text-xl font-bold text-white mt-3">Link Pushed to Audience</h3>
-              <p className="text-xs text-zinc-400 mt-2 font-mono break-all">{activeAirblastUrl}</p>
-            </div>
-          </div>
-        )}
-
         {/* Presentation Canvas Card */}
         <div 
-          className={`relative w-full max-h-[75vh] aspect-[16/9] glass-panel rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border border-white/10 ${
+          className={`relative w-full max-h-[75vh] aspect-[16/9] glass-panel rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center border transition-all duration-300 ${
+            airblastActive 
+              ? 'border-emerald-500/60 shadow-[0_0_50px_rgba(16,185,129,0.3)]' 
+              : 'border-white/10'
+          } ${
             shuffleDirection === 'next' ? 'slide-shuffle-next' : 'slide-shuffle-prev'
           }`}
           key={currentSlide}
@@ -307,11 +340,15 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
           />
 
           {/* Current Slide Link Indicator Badge */}
-          {currentLink && !airblastActive && (
-            <div className="absolute top-4 left-4 z-10 glass-card px-3 py-1.5 rounded-lg border border-emerald-500/30 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          {currentLink && (
+            <div className={`absolute top-4 left-4 z-10 glass-card px-3 py-1.5 rounded-lg border transition-all duration-300 flex items-center gap-2 ${
+              airblastActive 
+                ? 'border-emerald-400 bg-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.6)] scale-105' 
+                : 'border-emerald-500/30'
+            }`}>
+              <span className={`w-2 h-2 rounded-full bg-emerald-400 ${airblastActive ? 'animate-ping' : ''}`}></span>
               <span className="text-[11px] font-mono text-emerald-400 font-semibold">
-                AirBlast Link Ready
+                {airblastActive ? 'AirBlast Broadcasted' : 'AirBlast Link Ready'}
               </span>
             </div>
           )}
