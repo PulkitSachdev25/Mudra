@@ -4,15 +4,14 @@ import MOMCardItem from './MOMCardItem';
 import { exportMinutesToPDF } from '../utils/pdfExporter';
 import { soundEngine } from '../utils/soundEffects';
 import { 
-  LogOut, Wifi, FileDown, Layers, ExternalLink, 
-  PenTool, Highlighter, Eraser, MousePointer, Sparkles 
+  LogOut, FileDown, Layers, ExternalLink, 
+  PenTool, Highlighter, Eraser, MousePointer 
 } from 'lucide-react';
 
 export default function AudienceWorkspace({ roomCode, onLeave }) {
   const [momCards, setMomCards] = useState([]);
   const [currentSlide, setCurrentSlide] = useState(1);
   const [pushedLinkToast, setPushedLinkToast] = useState(null);
-  const [popupsTested, setPopupsTested] = useState(false);
 
   // Annotation Toolbar State
   const [activeTool, setActiveTool] = useState('none'); // 'none' | 'pen' | 'highlighter' | 'eraser'
@@ -68,15 +67,17 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
 
           // 2. High-priority capturing interaction listener:
           // If the browser popup blocker throttled background WebSocket popups,
-          // the audience member's very next screen touch/click carries trusted user activation
+          // the audience member's very next screen touch/click/key carries trusted user activation
           // and immediately opens the URL in a new window!
           const handleCapturingTapToOpen = () => {
-            window.open(msg.url, '_blank');
-            window.removeEventListener('click', handleCapturingTapToOpen, true);
-            window.removeEventListener('touchend', handleCapturingTapToOpen, true);
+            window.open(msg.url, '_blank', 'noopener,noreferrer');
+            ['click', 'touchend', 'pointerdown', 'keydown'].forEach((evt) => {
+              window.removeEventListener(evt, handleCapturingTapToOpen, true);
+            });
           };
-          window.addEventListener('click', handleCapturingTapToOpen, { capture: true, once: true });
-          window.addEventListener('touchend', handleCapturingTapToOpen, { capture: true, once: true });
+          ['click', 'touchend', 'pointerdown', 'keydown'].forEach((evt) => {
+            window.addEventListener(evt, handleCapturingTapToOpen, { capture: true, once: true });
+          });
 
           // Add link card to MoM cards in chronological order (FIFO in storage, LIFO on screen)
           const linkCard = msg.link_card || {
@@ -156,39 +157,11 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
         </div>
 
         <div className="flex items-center gap-3 text-xs">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full glass-card text-zinc-300">
-            <Wifi className={`w-3.5 h-3.5 ${isConnected ? 'text-emerald-400' : 'text-zinc-500'}`} />
-            <span>{isConnected ? 'Stage Live' : 'Connecting...'}</span>
-          </div>
-
-          {/* Quick Pop-up Auto-Open Activator */}
-          <button
-            onClick={() => {
-              const testWin = window.open('about:blank', '_blank');
-              if (testWin && !testWin.closed) {
-                testWin.close();
-                setPopupsTested(true);
-                alert('Auto-Window pop-ups are active and enabled! Stage links will pop open automatically in a new window.');
-              } else {
-                alert('Pop-ups are currently blocked by your browser.\n\nTo allow stage links to auto-open in a new window:\n1. Look at the right side of your address bar for the "Pop-up blocked" icon.\n2. Click it and select "Always allow pop-ups and redirects from this site".\n3. Click Done!');
-              }
-            }}
-            className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all cursor-pointer ${
-              popupsTested 
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
-                : 'glass-card text-zinc-400 hover:text-white border-white/10'
-            }`}
-            title="Click to verify or enable browser auto-popups for this site"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>{popupsTested ? 'Auto-Open Ready' : 'Enable Auto-Popups'}</span>
-          </button>
-
           {/* Sticky Download as a PDF Button */}
           <button
             onClick={handleDownloadPDF}
             disabled={isExporting || momCards.length === 0}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-white text-black font-semibold text-xs tracking-wider uppercase hover:bg-zinc-200 active:scale-95 disabled:opacity-40 disabled:hover:bg-white transition-all cursor-pointer shadow-lg"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-black font-semibold text-xs tracking-wider uppercase hover:bg-zinc-200 active:scale-95 disabled:opacity-40 disabled:hover:bg-white transition-all cursor-pointer shadow-lg"
           >
             <FileDown className="w-3.5 h-3.5" />
             <span>{isExporting ? 'Compiling PDF...' : 'Download as PDF'}</span>
@@ -196,7 +169,7 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
 
           <button
             onClick={onLeave}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            className="p-2 rounded-xl hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
             title="Leave Session"
           >
             <LogOut className="w-4 h-4" />
