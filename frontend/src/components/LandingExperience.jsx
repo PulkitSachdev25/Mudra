@@ -129,23 +129,15 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
         </div>
       )}
 
-      {/* Telemetry HUD / Top Bar - Unveiled smoothly as curtain parts */}
+      {/* Top Bar - Only Info button on right, unveiled smoothly */}
       <div 
         style={{
           transform: introStarted ? 'translateY(0)' : 'translateY(-40px)',
           opacity: introStarted ? 1 : 0,
           transition: 'transform 3.0s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.4s ease',
         }}
-        className="z-30 w-full max-w-5xl flex justify-between items-center pt-2"
+        className="z-30 w-full max-w-5xl flex justify-end items-center pt-2"
       >
-        {/* Left Telemetry HUD Badge */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl glass-panel border border-white/10 text-xs text-zinc-300 font-mono shadow-md">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="font-semibold text-white tracking-wider">MUDRĀ OS</span>
-          <span className="text-zinc-500">•</span>
-          <span className="text-zinc-400 hidden sm:inline">Vision Core Ready</span>
-        </div>
-
         {/* Right Info Button */}
         <button
           onClick={(e) => {
@@ -159,7 +151,7 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
         </button>
       </div>
 
-      {/* Dashboard Main Content: MUDRĀ Logo and Host/Join Cards - Rising smoothly from underneath */}
+      {/* Dashboard Main Content: MUDRĀ Logo and Zoom-Animated Host/Join Cards */}
       <main 
         style={{
           transform: introStarted ? 'translateY(0) scale(1)' : 'translateY(120px) scale(0.96)',
@@ -169,7 +161,7 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
         }}
         className="z-20 w-full max-w-4xl flex flex-col items-center text-center my-auto py-6"
       >
-        {/* Big Bold Centered Title */}
+        {/* Big Bold Centered Title - Font & Styling Strictly Preserved */}
         <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tight text-white mb-2 uppercase drop-shadow-2xl">
           MUDRĀ
         </h1>
@@ -178,16 +170,21 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
           Spatial Presentation & Stage Bridge
         </p>
 
-        {/* Dual Card Container: Host & Audience */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
-          {/* Host Card */}
-          <div className="glass-panel p-7 rounded-2xl flex flex-col justify-between text-left group hover:border-white/20 transition-all duration-200">
+        {/* Dual Card Container: Host & Audience with Interactive Zoom Animations */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full max-w-3xl">
+          {/* Host Card - Zoom on Hover */}
+          <div className="glass-panel p-8 rounded-3xl flex flex-col justify-between text-left group border border-white/10 hover:border-white/30 hover:scale-[1.04] hover:-translate-y-1.5 transition-all duration-300 ease-out hover:shadow-[0_20px_50px_rgba(0,0,0,0.7),0_0_35px_rgba(56,189,248,0.15)] relative overflow-hidden">
+            {/* Subtle gradient hover sheen */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
             <div>
-              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-105 transition-transform">
-                <Presentation className="w-5 h-5 text-white" />
+              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-5 group-hover:scale-110 group-hover:bg-white group-hover:text-black transition-all duration-300 shadow-md">
+                <Presentation className="w-6 h-6" />
               </div>
-              <h2 className="text-xl font-bold text-white tracking-wide">Host Presentation</h2>
-              <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+              <h2 className="text-2xl font-bold text-white tracking-wide group-hover:text-white transition-colors">
+                Host Presentation
+              </h2>
+              <p className="text-xs text-zinc-400 mt-2.5 leading-relaxed font-normal">
                 Launch the Presenter Cockpit, drop in your PDF keynote, and control the stage with zero-touch spatial hand gestures.
               </p>
             </div>
@@ -198,21 +195,26 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
                 handleCreateHost();
               }}
               disabled={isCreatingRoom}
-              className="mt-8 w-full py-3.5 px-4 rounded-xl bg-white text-black font-semibold text-xs tracking-wider uppercase hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl disabled:opacity-50"
+              className="mt-8 w-full py-4 px-5 rounded-2xl bg-white text-black font-bold text-xs tracking-wider uppercase hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl group-hover:shadow-[0_0_25px_rgba(255,255,255,0.4)] disabled:opacity-50"
             >
               <span>{isCreatingRoom ? 'Creating Room...' : 'Start Session'}</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
 
-          {/* Join Audience Card */}
-          <div className="glass-panel p-7 rounded-2xl flex flex-col justify-between text-left group hover:border-white/20 transition-all duration-200">
+          {/* Join Audience Card - Zoom on Hover */}
+          <div className="glass-panel p-8 rounded-3xl flex flex-col justify-between text-left group border border-white/10 hover:border-white/30 hover:scale-[1.04] hover:-translate-y-1.5 transition-all duration-300 ease-out hover:shadow-[0_20px_50px_rgba(0,0,0,0.7),0_0_35px_rgba(16,185,129,0.15)] relative overflow-hidden">
+            {/* Subtle gradient hover sheen */}
+            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.04] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
             <div>
-              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-105 transition-transform">
-                <Users className="w-5 h-5 text-white" />
+              <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-5 group-hover:scale-110 group-hover:bg-white group-hover:text-black transition-all duration-300 shadow-md">
+                <Users className="w-6 h-6" />
               </div>
-              <h2 className="text-xl font-bold text-white tracking-wide">Join as Audience</h2>
-              <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+              <h2 className="text-2xl font-bold text-white tracking-wide group-hover:text-white transition-colors">
+                Join as Audience
+              </h2>
+              <p className="text-xs text-zinc-400 mt-2.5 leading-relaxed font-normal">
                 Pair your screen using the 4-digit stage code to receive live pushed links and annotate real-time meeting minutes.
               </p>
             </div>
@@ -223,43 +225,31 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
                 handleJoin(e);
               }} 
               onClick={(e) => e.stopPropagation()}
-              className="mt-8 flex flex-col gap-2"
+              className="mt-8 flex flex-col gap-2.5"
             >
-              <div className="flex gap-2">
+              <div className="flex gap-2.5">
                 <input
                   type="text"
                   maxLength={4}
                   value={audienceCode}
                   onChange={(e) => setAudienceCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="4-digit code"
-                  className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-center text-sm font-mono tracking-widest text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                  className="flex-1 bg-black/60 border border-white/15 rounded-2xl px-4 py-3.5 text-center text-sm font-mono tracking-widest text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/40 focus:ring-1 focus:ring-white/30 transition-all"
                 />
                 <button
                   type="submit"
-                  className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold text-xs tracking-wider uppercase active:scale-[0.98] transition-all cursor-pointer"
+                  className="px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 font-bold text-xs tracking-wider uppercase active:scale-[0.98] transition-all cursor-pointer shadow-lg hover:shadow-[0_0_20px_rgba(255,255,255,0.3)]"
                 >
                   Join
                 </button>
               </div>
               {errorMsg && (
-                <p className="text-[11px] text-red-400 px-1">{errorMsg}</p>
+                <p className="text-[11px] text-red-400 px-1 font-mono">{errorMsg}</p>
               )}
             </form>
           </div>
         </div>
       </main>
-
-      {/* Minimal Footer - Unveiled smoothly */}
-      <footer 
-        style={{
-          transform: introStarted ? 'translateY(0)' : 'translateY(40px)',
-          opacity: introStarted ? 1 : 0,
-          transition: 'transform 3.0s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.4s ease',
-        }}
-        className="z-20 text-[11px] text-zinc-600 tracking-wider uppercase font-mono"
-      >
-        MUDRĀ • BROWSER-NATIVE SPATIAL BRIDGE
-      </footer>
 
 
 
