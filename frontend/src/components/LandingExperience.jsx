@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Presentation, Users, ArrowRight, Info, X, Hand, Share2, Camera } from 'lucide-react';
-import FingerTrailCanvas from './FingerTrailCanvas';
+import React, { useState } from 'react';
+import { Presentation, Users, Info, X, Hand, Share2, Camera } from 'lucide-react';
 import ScrambleText from './ScrambleText';
-import { soundEngine } from '../utils/soundEffects';
 
 function CornerCrosshairs() {
   return (
@@ -20,30 +18,6 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [introStarted, setIntroStarted] = useState(false);
-  const [curtainDismissed, setCurtainDismissed] = useState(false);
-
-  // Preload hand cliff assets
-  useEffect(() => {
-    const urls = ['/god_valley_left.png', '/god_valley_right.png'];
-    urls.forEach((url) => {
-      const img = new Image();
-      img.src = url;
-    });
-  }, []);
-
-  const handleStartIntro = () => {
-    if (introStarted) return;
-    setIntroStarted(true);
-    try {
-      soundEngine.playIntroWhoosh();
-    } catch (e) {
-      console.warn('Intro sound error:', e);
-    }
-    setTimeout(() => {
-      setCurtainDismissed(true);
-    }, 4200);
-  };
 
   const handleCreateHost = async () => {
     setIsCreatingRoom(true);
@@ -74,87 +48,14 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
     onJoinAudience(clean);
   };
 
+  const mudraCharacters = ['M', 'U', 'D', 'R', 'Ā'];
+
   return (
-    <div 
-      onClick={handleStartIntro}
-      className={`relative min-h-screen w-full bg-[#060709] flex flex-col items-center justify-between p-6 select-none overflow-hidden ${
-        !introStarted ? 'cursor-pointer' : ''
-      }`}
-    >
-      {/* Interactive Monochrome 21-Node MediaPipe Wireframe Canvas */}
-      <FingerTrailCanvas />
-
-      {/* Full-Screen God Valley Parting Curtain Overlay */}
-      {!curtainDismissed && (
-        <div
-          className={`fixed inset-0 z-40 flex flex-col items-center justify-between p-6 overflow-hidden pointer-events-none transition-opacity duration-[1200ms] ${
-            introStarted ? 'opacity-0 delay-[2500ms]' : 'bg-[#060709]'
-          }`}
-        >
-          {/* Subtle Ambient Monochrome Spotlight */}
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,rgba(255,255,255,0.06),transparent_70%)] pointer-events-none" />
-
-          {/* Top Subtle Hardware Label */}
-          <div className="z-10 w-full max-w-5xl flex justify-between items-center opacity-30 pt-2 font-mono text-[11px] text-zinc-500 uppercase tracking-widest">
-            <span>[SYS // SPATIAL_CORE]</span>
-            <span>[TOPOLOGY // 21_LANDMARKS]</span>
-          </div>
-
-          {/* Central Full-Screen Hands Container */}
-          <div className="relative w-full max-w-5xl h-[65vh] sm:h-[75vh] my-auto flex items-center justify-center overflow-visible select-none">
-            {/* Left Hand / Rock Tower */}
-            <img
-              src="/god_valley_left.png"
-              alt="God Valley Left"
-              style={{
-                transform: introStarted ? 'translateX(-125vw) rotate(-5deg)' : 'translateX(0) rotate(0)',
-                opacity: introStarted ? 0 : 1,
-                transition: 'transform 3.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 3.2s ease',
-              }}
-              className="absolute inset-0 w-full h-full object-contain filter drop-shadow-[0_25px_60px_rgba(0,0,0,0.85)]"
-            />
-
-            {/* Right Hand / Rock Tower */}
-            <img
-              src="/god_valley_right.png"
-              alt="God Valley Right"
-              style={{
-                transform: introStarted ? 'translateX(125vw) rotate(5deg)' : 'translateX(0) rotate(0)',
-                opacity: introStarted ? 0 : 1,
-                transition: 'transform 3.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 3.2s ease',
-              }}
-              className="absolute inset-0 w-full h-full object-contain filter drop-shadow-[0_25px_60px_rgba(0,0,0,0.85)]"
-            />
-          </div>
-
-          {/* Bottom Floating Pulsing Prompt */}
-          {!introStarted ? (
-            <div className="z-10 flex flex-col items-center gap-2 pb-6 animate-pulse">
-              <span className="text-xs font-mono uppercase tracking-[0.35em] text-zinc-400">
-                Click anywhere to enter
-              </span>
-              <div className="w-16 h-[1px] bg-zinc-600" />
-            </div>
-          ) : (
-            <div className="h-10" />
-          )}
-        </div>
-      )}
-
-      {/* Top Bar - Only Info button on right with corner crosshairs */}
-      <div 
-        style={{
-          transform: introStarted ? 'translateY(0)' : 'translateY(-40px)',
-          opacity: introStarted ? 1 : 0,
-          transition: 'transform 3.0s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.4s ease',
-        }}
-        className="z-30 w-full max-w-5xl flex justify-end items-center pt-2"
-      >
+    <div className="relative min-h-screen w-full bg-[#060709] flex flex-col items-center justify-between p-6 select-none overflow-hidden">
+      {/* Top Bar with Info Button on Right */}
+      <div className="z-30 w-full max-w-5xl flex justify-end items-center pt-2">
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowInfoModal(true);
-          }}
+          onClick={() => setShowInfoModal(true)}
           className="relative w-10 h-10 rounded-xl bg-zinc-950/80 border border-zinc-800 hover:border-zinc-500 flex items-center justify-center text-zinc-300 hover:text-white active:scale-95 transition-all cursor-pointer shadow-lg"
           title="Gestures & Stage Bridge Info"
         >
@@ -163,40 +64,35 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
         </button>
       </div>
 
-      {/* Dashboard Main Content: MUDRĀ Title & Industrial Cards */}
-      <main 
-        style={{
-          transform: introStarted ? 'translateY(0) scale(1)' : 'translateY(120px) scale(0.96)',
-          opacity: introStarted ? 1 : 0,
-          pointerEvents: introStarted ? 'auto' : 'none',
-          transition: 'transform 3.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.6s ease',
-        }}
-        className="z-20 w-full max-w-4xl flex flex-col items-center text-center my-auto py-6"
-      >
-        {/* Big Bold Centered Title - Interactive Text Scramble on Hover */}
-        <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tight text-white mb-2 uppercase drop-shadow-2xl">
-          <ScrambleText text="MUDRĀ" />
+      {/* Main Content: MUDRĀ Title & Industrial Cards */}
+      <main className="z-20 w-full max-w-4xl flex flex-col items-center text-center my-auto py-8">
+        {/* Title: Each Individual Character Inverts on Hover without Scrambling */}
+        <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tight text-white mb-3 uppercase drop-shadow-2xl flex items-center justify-center gap-1 sm:gap-2">
+          {mudraCharacters.map((char, idx) => (
+            <span
+              key={idx}
+              className="inline-block transition-colors duration-150 hover:bg-white hover:text-black px-1.5 sm:px-2.5 rounded-sm cursor-pointer select-none"
+              title={`Letter ${char}`}
+            >
+              {char}
+            </span>
+          ))}
         </h1>
 
-        <p className="text-sm md:text-base text-zinc-400 font-mono tracking-[0.25em] uppercase max-w-md mb-10 text-xs">
+        {/* Spatial Presentation line in ONE single line */}
+        <p className="text-xs sm:text-sm text-zinc-400 font-mono tracking-[0.25em] uppercase whitespace-nowrap mb-10">
           [ SPATIAL_PRESENTATION // STAGE_BRIDGE ]
         </p>
 
-        {/* Dual Card Container: Industrial Hardware Aesthetic with Corner Crosshairs */}
+        {/* Dual Card Container with Corner Crosshairs and Zoom Animations */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 w-full max-w-3xl">
-          {/* Host Card [CH_01 // HOST_NODE] */}
+          {/* Host Card */}
           <div className="relative bg-zinc-950/85 border border-zinc-800 hover:border-zinc-500 p-8 rounded-2xl flex flex-col justify-between text-left group hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300 ease-out shadow-2xl overflow-hidden cursor-default">
             <CornerCrosshairs />
 
             <div>
-              {/* Monospace Hardware Label */}
-              <div className="flex items-center justify-between font-mono text-[11px] text-zinc-500 uppercase tracking-wider mb-6 pb-2.5 border-b border-zinc-800">
-                <span className="text-zinc-400 font-bold">[CH_01 // HOST_NODE]</span>
-                <span>WEBCAM_CV</span>
-              </div>
-
-              <div className="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white mb-4 group-hover:border-zinc-500 transition-colors">
-                <Presentation className="w-5 h-5 text-white" />
+              <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white mb-5 group-hover:border-zinc-500 transition-colors">
+                <Presentation className="w-6 h-6 text-white" />
               </div>
 
               <h2 className="text-2xl font-bold text-white tracking-wide font-sans">
@@ -208,30 +104,21 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
             </div>
 
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCreateHost();
-              }}
+              onClick={handleCreateHost}
               disabled={isCreatingRoom}
-              className="mt-8 w-full py-3.5 px-4 rounded-xl bg-white text-black font-mono font-bold text-xs tracking-wider uppercase hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl disabled:opacity-50"
+              className="mt-8 w-full py-4 px-4 rounded-xl bg-white text-black font-mono font-bold text-xs tracking-wider uppercase hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl disabled:opacity-50"
             >
               <span>{isCreatingRoom ? 'INITIALIZING...' : <ScrambleText text="START_SESSION ->" />}</span>
             </button>
           </div>
 
-          {/* Join Audience Card [CH_02 // SYNC_RECEIVER] */}
+          {/* Join Audience Card */}
           <div className="relative bg-zinc-950/85 border border-zinc-800 hover:border-zinc-500 p-8 rounded-2xl flex flex-col justify-between text-left group hover:scale-[1.03] hover:-translate-y-1 transition-all duration-300 ease-out shadow-2xl overflow-hidden cursor-default">
             <CornerCrosshairs />
 
             <div>
-              {/* Monospace Hardware Label */}
-              <div className="flex items-center justify-between font-mono text-[11px] text-zinc-500 uppercase tracking-wider mb-6 pb-2.5 border-b border-zinc-800">
-                <span className="text-zinc-400 font-bold">[CH_02 // SYNC_RECEIVER]</span>
-                <span>WSS_TELEMETRY</span>
-              </div>
-
-              <div className="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white mb-4 group-hover:border-zinc-500 transition-colors">
-                <Users className="w-5 h-5 text-white" />
+              <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-white mb-5 group-hover:border-zinc-500 transition-colors">
+                <Users className="w-6 h-6 text-white" />
               </div>
 
               <h2 className="text-2xl font-bold text-white tracking-wide font-sans">
@@ -242,26 +129,19 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
               </p>
             </div>
 
-            <form 
-              onSubmit={(e) => {
-                e.stopPropagation();
-                handleJoin(e);
-              }} 
-              onClick={(e) => e.stopPropagation()}
-              className="mt-8 flex flex-col gap-2.5"
-            >
-              <div className="flex gap-2">
+            <form onSubmit={handleJoin} className="mt-8 flex flex-col gap-2.5">
+              <div className="flex gap-2.5">
                 <input
                   type="text"
                   maxLength={4}
                   value={audienceCode}
                   onChange={(e) => setAudienceCode(e.target.value.replace(/\D/g, ''))}
                   placeholder="4-DIGIT CODE"
-                  className="flex-1 bg-black/90 border border-zinc-800 focus:border-zinc-400 rounded-xl px-4 py-3 text-center text-xs font-mono tracking-widest text-white placeholder:text-zinc-600 focus:outline-none transition-colors"
+                  className="flex-1 bg-black/90 border border-zinc-800 focus:border-zinc-400 rounded-xl px-4 py-3.5 text-center text-sm font-mono tracking-widest text-white placeholder:text-zinc-600 focus:outline-none transition-colors"
                 />
                 <button
                   type="submit"
-                  className="px-6 py-3 rounded-xl bg-white text-black hover:bg-zinc-200 font-mono font-bold text-xs tracking-wider uppercase active:scale-[0.98] transition-all cursor-pointer shadow-lg"
+                  className="px-6 py-3.5 rounded-xl bg-white text-black hover:bg-zinc-200 font-mono font-bold text-xs tracking-wider uppercase active:scale-[0.98] transition-all cursor-pointer shadow-lg"
                 >
                   <ScrambleText text="JOIN" />
                 </button>
