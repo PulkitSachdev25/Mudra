@@ -4,7 +4,8 @@ import { SAMPLE_SLIDES } from '../utils/sampleDeck';
 import { renderSampleSlideToCanvas, renderPdfPageToCanvas, loadPdfDocument, extractFirstLinkFromPdfPage } from '../utils/pdfLoader';
 import { 
   ChevronLeft, ChevronRight, Upload, Presentation, 
-  Maximize2, Minimize2, LogOut, Users, Wifi, Sparkles 
+  Maximize2, Minimize2, LogOut, Users, Wifi, Sparkles,
+  Copy, Check
 } from 'lucide-react';
 
 import { useMediaPipeGestures } from '../hooks/useMediaPipeGestures';
@@ -22,6 +23,15 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
   const [activeAirblastUrl, setActiveAirblastUrl] = useState('');
   const [currentLink, setCurrentLink] = useState(null);
   const currentLinkRef = useRef(null);
+  const [copiedRoomCode, setCopiedRoomCode] = useState(false);
+
+  const handleCopyRoomCode = () => {
+    if (roomCode) {
+      navigator.clipboard.writeText(roomCode);
+      setCopiedRoomCode(true);
+      setTimeout(() => setCopiedRoomCode(false), 2000);
+    }
+  };
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
@@ -290,15 +300,24 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
 
       {/* Top Header & Right Frosted Status Square */}
       <header className="z-30 w-full max-w-6xl flex items-center justify-between px-6 py-3">
-        {/* Left: Minimal Logo & Room Code */}
-        <div className="flex items-center gap-3 glass-panel px-4 py-2 rounded-xl">
-          <div className="w-6 h-6 rounded-md bg-white/10 flex items-center justify-center font-bold text-xs text-white">
-            M
-          </div>
-          <span className="text-xs font-semibold tracking-wide text-white">Mudrā Cockpit</span>
-          <span className="text-zinc-600">•</span>
-          <span className="text-xs font-mono text-zinc-300">Room #{roomCode}</span>
-        </div>
+        {/* Left: Room Code with Copy Option (M, Mudrā Cockpit, and dot separator fully removed) */}
+        <button
+          onClick={handleCopyRoomCode}
+          className="flex items-center gap-2.5 glass-panel px-4 py-2 rounded-xl border border-white/10 hover:border-zinc-500 transition-all cursor-pointer group active:scale-95"
+          title="Click to copy 4-digit room code"
+        >
+          <span className="text-xs font-mono tracking-wider text-zinc-200 font-semibold">
+            Room #{roomCode}
+          </span>
+          {copiedRoomCode ? (
+            <span className="flex items-center gap-1 text-[10px] font-mono text-white bg-white/15 px-1.5 py-0.5 rounded">
+              <Check className="w-3 h-3 text-white" />
+              <span>COPIED</span>
+            </span>
+          ) : (
+            <Copy className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-colors" />
+          )}
+        </button>
 
         {/* Right: The Minimal Frosted Status Square (NO text beside it, strictly as requested!) */}
         <div className="flex items-center gap-3">
@@ -375,20 +394,6 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
             ref={canvasRef}
             className="w-full h-full object-contain"
           />
-
-          {/* Current Slide Link Indicator Badge */}
-          {currentLink && (
-            <div className={`absolute top-4 left-4 z-10 glass-card px-3 py-1.5 rounded-lg border transition-all duration-300 flex items-center gap-2 ${
-              airblastActive 
-                ? 'border-emerald-400 bg-emerald-500/20 shadow-[0_0_20px_rgba(16,185,129,0.6)] scale-105' 
-                : 'border-emerald-500/30'
-            }`}>
-              <span className={`w-2 h-2 rounded-full bg-emerald-400 ${airblastActive ? 'animate-ping' : ''}`}></span>
-              <span className="text-[11px] font-mono text-emerald-400 font-semibold">
-                {airblastActive ? 'AirBlast Broadcasted' : 'AirBlast Link Ready'}
-              </span>
-            </div>
-          )}
         </div>
       </main>
 

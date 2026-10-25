@@ -19,14 +19,13 @@
   }
 }
 
-/* Textured Matrix Pattern (No Gradients) */
+/* Textured Grid Pattern (No Dots) */
 .bg-textured-matrix {
   background-color: #060709;
   background-image: 
-    radial-gradient(#181a24 1px, transparent 1px),
     linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-  background-size: 24px 24px, 48px 48px, 48px 48px;
+  background-size: 48px 48px, 48px 48px;
 }
 
 /* macOS Frosted Glass Dock */
