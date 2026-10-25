@@ -180,14 +180,14 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
       {/* Pushed AirBlast Toast Banner */}
       {pushedLinkToast && (
         <div className="z-30 w-full max-w-5xl mt-3 animate-in slide-in-from-top-4 duration-300">
-          <div className="glass-panel p-4 rounded-xl border border-sky-400/40 bg-sky-950/40 flex items-center justify-between shadow-2xl">
+          <div className="relative bg-zinc-950/90 p-4 rounded-xl border border-zinc-800 hover:border-zinc-700 flex items-center justify-between shadow-2xl overflow-hidden">
             <div className="flex items-center gap-3">
-              <ExternalLink className="w-4 h-4 text-sky-400 shrink-0" />
+              <ExternalLink className="w-4 h-4 text-zinc-400 shrink-0" />
               <div>
-                <p className="text-xs font-semibold text-sky-300 uppercase tracking-wider">
-                  AirBlast: {pushedLinkToast.title}
+                <p className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
+                  [AIRBLAST // {pushedLinkToast.title}]
                 </p>
-                <p className="text-xs text-zinc-300 font-mono truncate max-w-md">
+                <p className="text-xs text-zinc-300 font-mono truncate max-w-md mt-0.5">
                   {pushedLinkToast.url}
                 </p>
               </div>
@@ -196,7 +196,7 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
               href={pushedLinkToast.url}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-sky-400 hover:bg-sky-300 text-black font-semibold text-xs tracking-wide uppercase transition-colors shrink-0 shadow-lg cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-black font-mono font-bold text-xs tracking-wider uppercase transition-all shrink-0 shadow-lg cursor-pointer active:scale-95"
             >
               <span>Open Link</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -205,10 +205,10 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
         </div>
       )}
 
-      {/* Floating macOS Frosted Glass Annotation Toolbar */}
-      <div className="sticky top-20 z-20 my-4 glass-panel px-5 py-2.5 rounded-2xl flex items-center gap-4 shadow-2xl border border-white/10">
-        <span className="text-xs font-medium text-zinc-400 tracking-wide pr-2 border-r border-white/10 hidden sm:inline">
-          Annotation Tools
+      {/* Floating Monochrome Industrial Annotation Toolbar */}
+      <div className="sticky top-20 z-20 my-4 bg-zinc-950/90 px-5 py-2.5 rounded-2xl flex items-center gap-4 shadow-2xl border border-zinc-800 backdrop-blur-md">
+        <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase pr-2 border-r border-zinc-800 hidden sm:inline">
+          [TOOLS // ANNOTATION]
         </span>
 
         {/* Tool Selectors */}

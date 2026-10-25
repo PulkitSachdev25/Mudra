@@ -74,10 +74,10 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
 
     // Slide Image Snapshot or Resource Link Card
     if (card.type === 'link' || (!annotatedImage && card.url)) {
-      doc.setFillColor(12, 74, 110); // Sky-900 (Solid Light Blue tint)
+      doc.setFillColor(24, 24, 27); // Zinc-900
       doc.roundedRect(margin, currentY, contentWidth, 54, 4, 4, 'F');
 
-      doc.setTextColor(56, 189, 248); // Sky-400 (Solid Light Blue)
+      doc.setTextColor(161, 161, 170); // Zinc-400
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.text('DISPATCHED STAGE RESOURCE URL:', margin + 12, currentY + 18);
@@ -108,7 +108,7 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
         const textWidth = contentWidth - imgWidth - 20;
         let textY = currentY + 12;
 
-        doc.setTextColor(245, 158, 11); // Amber
+        doc.setTextColor(161, 161, 170); // Zinc-400
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text('CORE TAKEAWAY', textX, textY);
@@ -122,7 +122,7 @@ export async function exportMinutesToPDF({ roomCode, cards, annotationsMap = {} 
         textY += takeawayLines.length * 12 + 10;
 
         if (card.action_items && card.action_items.length > 0) {
-          doc.setTextColor(56, 189, 248); // Sky-400 (Solid Light Blue)
+          doc.setTextColor(161, 161, 170); // Zinc-400
           doc.setFontSize(10);
           doc.setFont('helvetica', 'bold');
           doc.text('ACTION ITEMS', textX, textY);
