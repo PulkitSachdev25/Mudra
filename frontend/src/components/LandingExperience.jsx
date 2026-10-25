@@ -52,8 +52,22 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
 
   return (
     <div className="relative min-h-screen w-full bg-[#060709] flex flex-col items-center justify-between p-6 select-none overflow-hidden">
-      {/* Top Bar with Info Button on Right */}
-      <div className="z-30 w-full max-w-5xl flex justify-end items-center pt-2">
+      {/* Top Bar with Logo on Left and Info Button on Right */}
+      <div className="z-30 w-full max-w-5xl flex justify-between items-center pt-2">
+        {/* Top-Left Mudrā Hand-M Lettermark */}
+        <div className="relative group flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-zinc-950/80 border border-zinc-800 hover:border-zinc-600 transition-all cursor-default shadow-lg">
+          <CornerCrosshairs />
+          <img 
+            src="/mudra_logo_transparent.png" 
+            alt="Mudrā Logo" 
+            className="h-6 sm:h-7 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+          />
+          <span className="font-mono text-[11px] tracking-widest text-zinc-300 uppercase font-semibold hidden sm:inline">
+            MUDRĀ
+          </span>
+        </div>
+
+        {/* Top-Right Info Button */}
         <button
           onClick={() => setShowInfoModal(true)}
           className="relative w-10 h-10 rounded-xl bg-zinc-950/80 border border-zinc-800 hover:border-zinc-500 flex items-center justify-center text-zinc-300 hover:text-white active:scale-95 transition-all cursor-pointer shadow-lg"

@@ -146,8 +146,8 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
       {/* Top Header Dock */}
       <header className="z-30 w-full max-w-5xl flex items-center justify-between px-6 py-3.5 glass-panel rounded-2xl">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center font-bold text-sm text-white">
-            M
+          <div className="h-8 px-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
+            <img src="/mudra_logo_transparent.png" alt="Mudrā Logo" className="h-5 w-auto object-contain" />
           </div>
           <div>
             <h1 className="text-sm font-semibold text-white">Audience Workspace</h1>
