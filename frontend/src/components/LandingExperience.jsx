@@ -1,14 +1,33 @@
-import React, { useState } from 'react';
-import { Presentation, Users, ArrowRight, Info, X, Hand, Share2, Camera, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Presentation, Users, ArrowRight, Info, X, Hand, Share2, Camera } from 'lucide-react';
 import FingerTrailCanvas from './FingerTrailCanvas';
-import CinematicIntro from './CinematicIntro';
+import { soundEngine } from '../utils/soundEffects';
 
 export default function LandingExperience({ onStartHost, onJoinAudience }) {
   const [audienceCode, setAudienceCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
-  const [showIntro, setShowIntro] = useState(true);
+  const [introStarted, setIntroStarted] = useState(false);
+
+  // Preload hand cliff assets
+  useEffect(() => {
+    const urls = ['/god_valley_left.png', '/god_valley_right.png'];
+    urls.forEach((url) => {
+      const img = new Image();
+      img.src = url;
+    });
+  }, []);
+
+  const handleStartIntro = () => {
+    if (introStarted) return;
+    setIntroStarted(true);
+    try {
+      soundEngine.playIntroWhoosh();
+    } catch (e) {
+      console.warn('Intro sound error:', e);
+    }
+  };
 
   const handleCreateHost = async () => {
     setIsCreatingRoom(true);
@@ -40,17 +59,24 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-textured-matrix flex flex-col items-center justify-between p-6 select-none overflow-hidden">
-      {/* Cinematic God Valley Entrance Overlay */}
-      {showIntro && <CinematicIntro onComplete={() => setShowIntro(false)} />}
-
+    <div 
+      onClick={handleStartIntro}
+      className={`relative min-h-screen w-full bg-textured-matrix flex flex-col items-center justify-between p-6 select-none overflow-hidden ${
+        !introStarted ? 'cursor-pointer' : ''
+      }`}
+    >
       {/* Interactive Finger Trail Canvas Overlay */}
       <FingerTrailCanvas />
 
       {/* Top Bar with Info Button on Right */}
-      <div className="z-30 w-full max-w-5xl flex justify-end items-center pt-2">
+      <div className={`z-30 w-full max-w-5xl flex justify-end items-center pt-2 transition-opacity duration-700 ${
+        introStarted ? 'opacity-100' : 'opacity-40'
+      }`}>
         <button
-          onClick={() => setShowInfoModal(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowInfoModal(true);
+          }}
           className="w-10 h-10 rounded-xl glass-panel flex items-center justify-center text-zinc-300 hover:text-white hover:border-white/25 active:scale-95 transition-all cursor-pointer shadow-lg"
           title="Gestures & Stage Bridge Info"
         >
@@ -58,76 +84,143 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
         </button>
       </div>
 
-      {/* Center Hero with Big MUDRĀ */}
-      <main className="z-20 w-full max-w-4xl flex flex-col items-center text-center my-auto py-8">
-        {/* Big Bold Centered Title */}
+      {/* Center Hero: MUDRA Title stays right here while hands part and cards scroll up */}
+      <main className="z-20 w-full max-w-4xl flex flex-col items-center text-center my-auto py-4">
+        {/* Big Bold Centered Title - STAYS RIGHT HERE */}
         <h1 className="text-6xl sm:text-8xl md:text-9xl font-black tracking-tight text-white mb-2 uppercase drop-shadow-2xl">
           MUDRĀ
         </h1>
 
-        <p className="text-sm md:text-base text-zinc-400 font-medium tracking-wide max-w-md mb-10">
+        <p className="text-sm md:text-base text-zinc-400 font-medium tracking-[0.2em] uppercase max-w-md mb-8">
           Spatial Presentation & Stage Bridge
         </p>
 
-        {/* Dual Card Container: Host & Audience */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
-          {/* Host Card */}
-          <div className="glass-panel p-7 rounded-2xl flex flex-col justify-between text-left group hover:border-white/20 transition-all duration-200">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-105 transition-transform">
-                <Presentation className="w-5 h-5 text-white" />
-              </div>
-              <h2 className="text-xl font-bold text-white tracking-wide">Host Presentation</h2>
-              <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                Launch the Presenter Cockpit, drop in your PDF keynote, and control the stage with zero-touch spatial hand gestures.
-              </p>
-            </div>
+        {/* Central Stage: Hands Part Slowly while Dual Cards Scroll Up */}
+        <div className="relative w-full max-w-2xl flex flex-col items-center justify-center min-h-[360px] sm:min-h-[400px]">
+          {/* The Hands / God Valley Rock Towers */}
+          <div
+            className={`absolute inset-0 flex items-center justify-center overflow-visible pointer-events-none transition-opacity duration-1000 ${
+              introStarted ? 'opacity-0' : 'opacity-100'
+            }`}
+            style={{
+              transitionDelay: introStarted ? '1.4s' : '0s'
+            }}
+          >
+            <div className="relative w-full h-[360px] sm:h-[400px] flex items-center justify-center">
+              {/* Left Hand - Glides gracefully to the left */}
+              <img
+                src="/god_valley_left.png"
+                alt="Mudra Left Hand"
+                style={{
+                  transform: introStarted ? 'translateX(-120vw) rotate(-6deg)' : 'translateX(0) rotate(0)',
+                  opacity: introStarted ? 0 : 1,
+                  transition: 'transform 2.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.0s ease',
+                }}
+                className="absolute inset-0 w-full h-full object-contain filter drop-shadow-[0_20px_50px_rgba(14,165,233,0.35)] select-none"
+              />
 
-            <button
-              onClick={handleCreateHost}
-              disabled={isCreatingRoom}
-              className="mt-8 w-full py-3.5 px-4 rounded-xl bg-white text-black font-semibold text-xs tracking-wider uppercase hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl disabled:opacity-50"
-            >
-              <span>{isCreatingRoom ? 'Creating Room...' : 'Start Session'}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+              {/* Right Hand - Glides gracefully to the right */}
+              <img
+                src="/god_valley_right.png"
+                alt="Mudra Right Hand"
+                style={{
+                  transform: introStarted ? 'translateX(120vw) rotate(6deg)' : 'translateX(0) rotate(0)',
+                  opacity: introStarted ? 0 : 1,
+                  transition: 'transform 2.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 2.0s ease',
+                }}
+                className="absolute inset-0 w-full h-full object-contain filter drop-shadow-[0_20px_50px_rgba(14,165,233,0.35)] select-none"
+              />
+            </div>
           </div>
 
-          {/* Join Audience Card */}
-          <div className="glass-panel p-7 rounded-2xl flex flex-col justify-between text-left group hover:border-white/20 transition-all duration-200">
-            <div>
-              <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-105 transition-transform">
-                <Users className="w-5 h-5 text-white" />
+          {/* Dual Card Container: Host & Audience - Scrolls up smoothly from below */}
+          <div
+            style={{
+              transform: introStarted ? 'translateY(0)' : 'translateY(160px)',
+              opacity: introStarted ? 1 : 0,
+              pointerEvents: introStarted ? 'auto' : 'none',
+              transition: 'transform 2.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.9s ease',
+            }}
+            className="w-full grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            {/* Host Card */}
+            <div className="glass-panel p-7 rounded-2xl flex flex-col justify-between text-left group hover:border-white/20 transition-all duration-200">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-105 transition-transform">
+                  <Presentation className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-white tracking-wide">Host Presentation</h2>
+                <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                  Launch the Presenter Cockpit, drop in your PDF keynote, and control the stage with zero-touch spatial hand gestures.
+                </p>
               </div>
-              <h2 className="text-xl font-bold text-white tracking-wide">Join as Audience</h2>
-              <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                Pair your screen using the 4-digit stage code to receive live pushed links and annotate real-time meeting minutes.
-              </p>
+
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCreateHost();
+                }}
+                disabled={isCreatingRoom}
+                className="mt-8 w-full py-3.5 px-4 rounded-xl bg-white text-black font-semibold text-xs tracking-wider uppercase hover:bg-zinc-200 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xl disabled:opacity-50"
+              >
+                <span>{isCreatingRoom ? 'Creating Room...' : 'Start Session'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
 
-            <form onSubmit={handleJoin} className="mt-8 flex flex-col gap-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  maxLength={4}
-                  value={audienceCode}
-                  onChange={(e) => setAudienceCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="4-digit code"
-                  className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-center text-sm font-mono tracking-widest text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
-                />
-                <button
-                  type="submit"
-                  className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold text-xs tracking-wider uppercase active:scale-[0.98] transition-all cursor-pointer"
-                >
-                  Join
-                </button>
+            {/* Join Audience Card */}
+            <div className="glass-panel p-7 rounded-2xl flex flex-col justify-between text-left group hover:border-white/20 transition-all duration-200">
+              <div>
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white mb-4 group-hover:scale-105 transition-transform">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-white tracking-wide">Join as Audience</h2>
+                <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
+                  Pair your screen using the 4-digit stage code to receive live pushed links and annotate real-time meeting minutes.
+                </p>
               </div>
-              {errorMsg && (
-                <p className="text-[11px] text-red-400 px-1">{errorMsg}</p>
-              )}
-            </form>
+
+              <form 
+                onSubmit={(e) => {
+                  e.stopPropagation();
+                  handleJoin(e);
+                }} 
+                onClick={(e) => e.stopPropagation()}
+                className="mt-8 flex flex-col gap-2"
+              >
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={audienceCode}
+                    onChange={(e) => setAudienceCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="4-digit code"
+                    className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-center text-sm font-mono tracking-widest text-white placeholder:text-zinc-600 focus:outline-none focus:border-white/30 transition-colors"
+                  />
+                  <button
+                    type="submit"
+                    className="px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold text-xs tracking-wider uppercase active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    Join
+                  </button>
+                </div>
+                {errorMsg && (
+                  <p className="text-[11px] text-red-400 px-1">{errorMsg}</p>
+                )}
+              </form>
+            </div>
           </div>
         </div>
+
+        {/* Pulsing Hint before user clicks */}
+        {!introStarted && (
+          <div className="mt-8 flex flex-col items-center gap-2 animate-pulse">
+            <span className="text-xs font-mono uppercase tracking-[0.3em] text-zinc-400">
+              Click anywhere to enter
+            </span>
+            <div className="w-12 h-0.5 rounded-full bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+          </div>
+        )}
       </main>
 
       {/* Minimal Footer */}
