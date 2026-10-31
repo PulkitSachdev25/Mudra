@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import base64
+import asyncio
 from datetime import datetime
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
@@ -237,23 +238,44 @@ async def websocket_endpoint(websocket: WebSocket, room_code: str, client_type: 
                     question_text = (payload.get("question") or "").strip()
                     author = payload.get("author", "Audience Member")
                     if question_text and room_code in manager.rooms:
-                        ai_answer = get_gemini_qa_answer(question_text, slide_index)
+                        q_id = f"q_{int(datetime.now().timestamp() * 1000)}_{random.randint(100, 999)}"
                         q_obj = {
-                            "id": f"q_{int(datetime.now().timestamp() * 1000)}_{random.randint(100, 999)}",
+                            "id": q_id,
                             "slide_index": slide_index,
                             "question": question_text,
                             "author": author,
                             "votes": 1,
-                            "ai_answer": ai_answer,
+                            "ai_answer": "Synthesizing answer with Gemini AI...",
                             "timestamp": datetime.now().strftime("%I:%M %p")
                         }
                         if "questions" not in manager.rooms[room_code]:
                             manager.rooms[room_code]["questions"] = []
                         manager.rooms[room_code]["questions"].append(q_obj)
+
+                        # Broadcast question immediately so it shows up in real-time with 0 latency
                         await manager.broadcast_to_all(room_code, {
                             "type": "QUESTION_ADDED",
                             "question": q_obj
                         })
+
+                        # Background non-blocking task for Gemini AI answer synthesis
+                        async def resolve_ai_answer(rc: str, target_qid: str, q_txt: str, s_idx: int):
+                            try:
+                                ans = await asyncio.to_thread(get_gemini_qa_answer, q_txt, s_idx)
+                                if rc in manager.rooms and "questions" in manager.rooms[rc]:
+                                    for q in manager.rooms[rc]["questions"]:
+                                        if q["id"] == target_qid:
+                                            q["ai_answer"] = ans
+                                            await manager.broadcast_to_all(rc, {
+                                                "type": "QUESTION_ANSWER_UPDATED",
+                                                "question_id": target_qid,
+                                                "ai_answer": ans
+                                            })
+                                            break
+                            except Exception as err:
+                                logger.warning(f"Background Gemini Q&A task error: {err}")
+
+                        asyncio.create_task(resolve_ai_answer(room_code, q_id, question_text, slide_index))
 
                 elif msg_type == "UPVOTE_QUESTION":
                     q_id = payload.get("question_id")
@@ -293,11 +315,15 @@ def filter_filler_words(text: str) -> str:
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
+def get_clean_gemini_key() -> str:
+    raw = os.environ.get("GEMINI_API_KEY", "")
+    return raw.strip().strip('"').strip("'")
+
 def get_gemini_qa_answer(question_text: str, slide_index: int = 1) -> str:
     """
     Synthesize an authoritative, direct 1-2 line answer to audience doubts using Gemini API.
     """
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key = get_clean_gemini_key()
     if not api_key:
         return "Answer queued for presenter live response."
     
@@ -309,13 +335,20 @@ def get_gemini_qa_answer(question_text: str, slide_index: int = 1) -> str:
 
 Provide a crisp, direct, and helpful answer in exactly 1 to 2 lines. Do not use conversational greetings, filler, or preamble."""
 
-        candidate_models = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.8-flash"]
+        candidate_models = [
+            "gemini-3.5-flash",
+            "gemini-flash-lite-latest",
+            "gemini-3-flash-preview",
+            "gemini-2.5-flash",
+            "gemini-flash-latest"
+        ]
         for m in candidate_models:
             try:
                 res = client.models.generate_content(model=m, contents=prompt)
                 if res.text and res.text.strip():
                     return res.text.strip()
-            except Exception:
+            except Exception as err:
+                logger.warning(f"QA model {m} failed: {err}")
                 continue
     except Exception as e:
         logger.warning(f"Failed to generate Gemini Q&A answer: {e}")
@@ -328,7 +361,7 @@ async def summarize_action_snap(req: SummarizeRequest):
     card_id = f"mom-{int(datetime.now().timestamp() * 1000)}"
     
     # Analyze slide visually with Google Gemini Vision API (Zero audio dependency)
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    api_key = get_clean_gemini_key()
     summary_data = None
 
     if api_key and req.image_data:
@@ -360,7 +393,13 @@ Return ONLY a valid JSON object matching this schema:
   "action_points": ["string"]
 }}"""
 
-            candidate_models = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.8-flash"]
+            candidate_models = [
+                "gemini-3.5-flash",
+                "gemini-flash-lite-latest",
+                "gemini-3-flash-preview",
+                "gemini-2.5-flash",
+                "gemini-flash-latest"
+            ]
             for model_name in candidate_models:
                 try:
                     response = client.models.generate_content(
@@ -492,7 +531,13 @@ Return ONLY a valid JSON object matching this schema:
   "actionable_coaching_cues": ["string", "string"]
 }}"""
 
-            candidate_models = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.8-flash"]
+            candidate_models = [
+                "gemini-3.5-flash",
+                "gemini-flash-lite-latest",
+                "gemini-3-flash-preview",
+                "gemini-2.5-flash",
+                "gemini-flash-latest"
+            ]
             for model_name in candidate_models:
                 try:
                     response = client.models.generate_content(

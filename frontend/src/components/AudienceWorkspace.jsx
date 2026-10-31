@@ -110,6 +110,10 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
         if (msg.question) {
           setQuestions((prev) => [msg.question, ...prev.filter((q) => q.id !== msg.question.id)]);
         }
+      } else if (msg.type === 'QUESTION_ANSWER_UPDATED') {
+        setQuestions((prev) =>
+          prev.map((q) => (q.id === msg.question_id ? { ...q, ai_answer: msg.ai_answer } : q))
+        );
       } else if (msg.type === 'QUESTION_UPVOTED') {
         setQuestions((prev) =>
           prev.map((q) => (q.id === msg.question_id ? { ...q, votes: msg.votes } : q))
@@ -126,6 +130,8 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
       question: questionText.trim(),
       author: 'Audience Member',
     });
+    // Automatically open the Q&A drawer so the audience sees their question live!
+    setIsQaOpen(true);
   };
 
   const handleUpvoteQuestion = (questionId) => {
@@ -455,11 +461,11 @@ export default function AudienceWorkspace({ roomCode, onLeave }) {
                     {/* Gemini AI 1-2 Line Answer Box */}
                     {q.ai_answer && (
                       <div className="p-2.5 rounded-lg bg-zinc-900/60 border border-zinc-800/80 space-y-1">
-                        <div className="flex items-center gap-1 text-[9px] font-mono tracking-widest uppercase text-sky-400">
-                          <Sparkles className="w-3 h-3 text-sky-400" />
-                          <span>Gemini Answer</span>
+                        <div className="flex items-center gap-1.5 text-[9px] font-mono tracking-widest uppercase text-sky-400">
+                          <Sparkles className={`w-3 h-3 text-sky-400 ${q.ai_answer.startsWith('Synthesizing') ? 'animate-spin' : ''}`} />
+                          <span>{q.ai_answer.startsWith('Synthesizing') ? 'Gemini Analyzing...' : 'Gemini Answer'}</span>
                         </div>
-                        <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                        <p className={`text-xs font-sans leading-relaxed ${q.ai_answer.startsWith('Synthesizing') ? 'text-zinc-500 italic animate-pulse' : 'text-zinc-300'}`}>
                           {q.ai_answer}
                         </p>
                       </div>

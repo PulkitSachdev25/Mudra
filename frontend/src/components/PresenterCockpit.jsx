@@ -63,6 +63,10 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
         if (msg.question) {
           setQuestions((prev) => [msg.question, ...prev.filter((q) => q.id !== msg.question.id)]);
         }
+      } else if (msg.type === 'QUESTION_ANSWER_UPDATED') {
+        setQuestions((prev) =>
+          prev.map((q) => (q.id === msg.question_id ? { ...q, ai_answer: msg.ai_answer } : q))
+        );
       } else if (msg.type === 'QUESTION_UPVOTED') {
         setQuestions((prev) =>
           prev.map((q) => (q.id === msg.question_id ? { ...q, votes: msg.votes } : q))
@@ -858,11 +862,11 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
 
                           {q.ai_answer && (
                             <div className="p-2 rounded-lg bg-zinc-900/60 border border-zinc-800/80 space-y-0.5">
-                              <div className="text-[9px] font-mono tracking-wider uppercase text-sky-400 flex items-center gap-1">
-                                <Sparkles className="w-2.5 h-2.5 text-sky-400" />
-                                <span>Gemini 1-2 Line Answer</span>
+                              <div className="text-[9px] font-mono tracking-wider uppercase text-sky-400 flex items-center gap-1.5">
+                                <Sparkles className={`w-2.5 h-2.5 text-sky-400 ${q.ai_answer.startsWith('Synthesizing') ? 'animate-spin' : ''}`} />
+                                <span>{q.ai_answer.startsWith('Synthesizing') ? 'Gemini Analyzing...' : 'Gemini 1-2 Line Answer'}</span>
                               </div>
-                              <p className="text-[11px] text-zinc-300 font-sans leading-relaxed">
+                              <p className={`text-[11px] font-sans leading-relaxed ${q.ai_answer.startsWith('Synthesizing') ? 'text-zinc-500 italic animate-pulse' : 'text-zinc-300'}`}>
                                 {q.ai_answer}
                               </p>
                             </div>
