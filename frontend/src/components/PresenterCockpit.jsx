@@ -5,7 +5,8 @@ import { renderSampleSlideToCanvas, renderPdfPageToCanvas, loadPdfDocument, extr
 import { 
   ChevronLeft, ChevronRight, Upload, Presentation, 
   Maximize2, Minimize2, LogOut, Users, Wifi, Sparkles,
-  Copy, Check, BarChart2, Clock, CheckCircle2
+  Copy, Check, BarChart2, Clock, CheckCircle2,
+  Menu, X
 } from 'lucide-react';
 
 import { useMediaPipeGestures } from '../hooks/useMediaPipeGestures';
@@ -81,8 +82,30 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
   const sessionStartTimeRef = useRef(Date.now());
   const slideEnterTimeRef = useRef(Date.now());
 
-  // Pre-session setup modal state
-  const [showPacingModal, setShowPacingModal] = useState(true);
+  // Slide Pacing Sidebar state (replaces overwhelming popup with sleek burger drawer)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Read / write per-slide planned seconds
+  const getSlideTarget = useCallback((slideNum) => {
+    return targetDurations[slideNum] !== undefined ? targetDurations[slideNum] : defaultTargetSeconds;
+  }, [targetDurations, defaultTargetSeconds]);
+
+  const updateSlideTarget = useCallback((slideNum, val) => {
+    const num = Math.max(5, parseInt(val) || 10);
+    setTargetDurations((prev) => ({
+      ...prev,
+      [slideNum]: num,
+    }));
+  }, []);
+
+  const applyDefaultToAll = useCallback((seconds) => {
+    const updated = {};
+    for (let i = 1; i <= totalPages; i++) {
+      updated[i] = seconds;
+    }
+    setTargetDurations(updated);
+    setDefaultTargetSeconds(seconds);
+  }, [totalPages]);
 
   // End of presentation report state
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -212,7 +235,11 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     if (isGeneratingReport) return;
     setIsGeneratingReport(true);
     const computedTimes = getComputedSlideDurations();
-    const pacingAcc = calculatePacingAccuracy(computedTimes, targetDurations);
+    const allTargets = {};
+    for (let i = 1; i <= totalPages; i++) {
+      allTargets[i] = getSlideTarget(i);
+    }
+    const pacingAcc = calculatePacingAccuracy(computedTimes, allTargets);
     const totalSecs = (Date.now() - sessionStartTimeRef.current) / 1000;
     const fullTranscript = getFullTranscript();
 
@@ -224,7 +251,7 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
           room_code: roomCode,
           total_duration_seconds: totalSecs,
           slide_durations: computedTimes,
-          target_durations: targetDurations,
+          target_durations: allTargets,
           filler_word_counts: fillerCounts,
           total_filler_words: totalFillerWords,
           pacing_accuracy_percent: pacingAcc,
@@ -424,8 +451,21 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
 
       {/* Top Header & Right Frosted Status Square */}
       <header className="z-30 w-full max-w-6xl flex items-center justify-between px-6 py-3">
-        {/* Left: Room Code with Copy Option and Pacing Budget Button */}
+        {/* Left: Sidebar Burger Menu and Room Code */}
         <div className="flex items-center gap-2.5">
+          {/* Sidebar Burger Icon */}
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="flex items-center gap-2 glass-panel px-3.5 py-2 rounded-xl border border-white/10 hover:border-zinc-400 text-zinc-300 hover:text-white transition-all cursor-pointer group active:scale-95"
+            title="Open Slide Pacing Sidebar (Set time per slide)"
+          >
+            <Menu className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors" />
+            <span className="text-xs font-mono tracking-wider font-semibold">
+              Slides ({totalPages})
+            </span>
+          </button>
+
+          {/* Room Code with Copy Option */}
           <button
             onClick={handleCopyRoomCode}
             className="flex items-center gap-2.5 glass-panel px-4 py-2 rounded-xl border border-white/10 hover:border-zinc-500 transition-all cursor-pointer group active:scale-95"
@@ -442,16 +482,6 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
             ) : (
               <Copy className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-colors" />
             )}
-          </button>
-
-          {/* Planned Slide Budget Setup Trigger */}
-          <button
-            onClick={() => setShowPacingModal(true)}
-            className="flex items-center gap-1.5 glass-panel px-3 py-2 rounded-xl border border-zinc-800 hover:border-zinc-500 text-zinc-400 hover:text-white transition-all cursor-pointer text-xs font-mono"
-            title="Configure planned seconds per slide"
-          >
-            <Clock className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Target: {defaultTargetSeconds}s/slide</span>
           </button>
         </div>
 
@@ -647,70 +677,161 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
         </div>
       </footer>
 
-      {/* Pre-Presentation Slide Pacing Budget Modal */}
-      {showPacingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-zinc-950 border border-zinc-800 rounded-2xl p-6 shadow-2xl text-zinc-200">
-            <PacingCrosshairs />
-            <div className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase mb-1">
-              [STAGE_PACING // SETUP]
-            </div>
-            <h3 className="text-base font-semibold text-white tracking-wide mb-2">
-              Slide Target Duration Budget
-            </h3>
-            <p className="text-xs text-zinc-400 font-sans leading-relaxed mb-4">
-              Set your planned duration target for each slide before starting. When your presentation concludes, Mudrā evaluates pacing cadence and rhythmic accuracy without demoralizing grades.
-            </p>
+      {/* Slide Pacing & Telemetry Sidebar Drawer */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+          />
 
-            {/* Target Seconds Input */}
-            <div className="mb-4">
-              <label className="block font-mono text-[10px] uppercase text-zinc-400 mb-1.5">
-                Default Seconds Per Slide
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={10}
-                  max={600}
-                  value={defaultTargetSeconds}
-                  onChange={(e) => {
-                    const val = Math.max(5, parseInt(e.target.value) || 30);
-                    setDefaultTargetSeconds(val);
-                  }}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-white transition-colors"
-                />
-                <span className="font-mono text-xs text-zinc-500 shrink-0">sec / slide</span>
+          {/* Drawer Panel */}
+          <aside className="relative z-10 w-80 sm:w-96 h-full bg-[#090a0d] border-r border-zinc-800 shadow-2xl flex flex-col justify-between text-zinc-200 animate-in slide-in-from-left duration-300">
+            {/* Top Bar */}
+            <div className="px-5 py-4 border-b border-zinc-800/80 bg-zinc-950/80 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Menu className="w-4 h-4 text-zinc-400" />
+                <div>
+                  <div className="font-mono text-[9px] tracking-widest text-zinc-500 uppercase">
+                    [SLIDE_PACING // BUDGETS]
+                  </div>
+                  <h3 className="text-sm font-semibold text-white tracking-wide">
+                    Slide Time Allocation
+                  </h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                title="Close Sidebar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Quick Batch Row */}
+            <div className="px-5 py-3 border-b border-zinc-800/60 bg-zinc-900/30">
+              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 uppercase mb-2">
+                <span>Set All Slides To:</span>
+                <span className="text-zinc-500">{totalPages} Slides</span>
+              </div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {[30, 45, 60, 90].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => applyDefaultToAll(preset)}
+                    className={`py-1 rounded-md border text-[11px] font-mono transition-colors cursor-pointer ${
+                      defaultTargetSeconds === preset
+                        ? 'bg-zinc-800 text-white border-zinc-500 font-bold'
+                        : 'bg-zinc-900/80 hover:bg-zinc-800 border-zinc-800 text-zinc-300 hover:text-white'
+                    }`}
+                  >
+                    {preset}s
+                  </button>
+                ))}
               </div>
             </div>
 
-            {/* Quick Presets */}
-            <div className="flex items-center gap-2 mb-6">
-              {[30, 45, 60, 90, 120].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setDefaultTargetSeconds(preset)}
-                  className={`flex-1 py-1.5 rounded-lg border text-xs font-mono transition-all cursor-pointer ${
-                    defaultTargetSeconds === preset
-                      ? 'bg-white text-black border-white font-bold'
-                      : 'bg-zinc-900/60 text-zinc-400 border-zinc-800 hover:border-zinc-600 hover:text-white'
-                  }`}
-                >
-                  {preset}s
-                </button>
-              ))}
+            {/* Scrollable Slide List with Individual Target Inputs */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2.5 custom-scrollbar">
+              {Array.from({ length: totalPages }, (_, idx) => {
+                const slideNum = idx + 1;
+                const isActive = currentSlide === slideNum;
+                const targetSec = getSlideTarget(slideNum);
+                const spentSec = Math.round(slideDurations[slideNum] || 0);
+
+                const slideTitle = deckType === 'sample'
+                  ? (SAMPLE_SLIDES[idx]?.title || `Slide #${slideNum}`)
+                  : `Slide #${slideNum}`;
+
+                return (
+                  <div
+                    key={slideNum}
+                    className={`p-3 rounded-xl border transition-all ${
+                      isActive
+                        ? 'bg-zinc-900/90 border-white/30 shadow-lg'
+                        : 'bg-zinc-950/70 border-zinc-800 hover:border-zinc-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div 
+                        onClick={() => {
+                          recordSlideDuration(currentSlide);
+                          currentSlideRef.current = slideNum;
+                          setCurrentSlide(slideNum);
+                          sendMessage({ type: 'SLIDE_UPDATE', slide: slideNum });
+                        }}
+                        className="flex items-center gap-2 cursor-pointer flex-1 mr-2"
+                        title="Click to jump to this slide"
+                      >
+                        <span className={`px-1.5 py-0.5 rounded font-mono text-[10px] font-bold border ${
+                          isActive
+                            ? 'bg-white text-black border-white'
+                            : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                        }`}>
+                          #{slideNum}
+                        </span>
+                        <span className="text-xs font-sans text-zinc-200 truncate max-w-[130px] sm:max-w-[160px]">
+                          {slideTitle}
+                        </span>
+                      </div>
+
+                      {isActive && (
+                        <span className="px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800 font-mono text-[9px] uppercase tracking-wider shrink-0">
+                          Active
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Inputs & Actual Time */}
+                    <div className="flex items-center justify-between pt-1 border-t border-zinc-800/60 font-mono text-xs">
+                      <div className="text-[10px] text-zinc-500">
+                        Spent: <span className="text-zinc-300 font-semibold">{spentSec}s</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-zinc-500">Target:</span>
+                        <input
+                          type="number"
+                          min="5"
+                          max="900"
+                          value={targetSec}
+                          onChange={(e) => updateSlideTarget(slideNum, e.target.value)}
+                          className="w-14 bg-zinc-900 border border-zinc-700 focus:border-white rounded px-2 py-0.5 text-xs text-white text-center font-mono focus:outline-none transition-colors"
+                        />
+                        <span className="text-[10px] text-zinc-500">s</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            <button
-              onClick={() => {
-                setShowPacingModal(false);
-                slideEnterTimeRef.current = Date.now();
-              }}
-              className="w-full py-2.5 rounded-xl bg-white hover:bg-zinc-200 text-black font-mono text-xs font-semibold tracking-wider uppercase transition-all cursor-pointer shadow-lg active:scale-95"
-            >
-              Confirm Budget & Begin Presenting
-            </button>
-          </div>
+            {/* Footer Summary */}
+            <div className="p-4 border-t border-zinc-800/80 bg-zinc-950/90 flex items-center justify-between">
+              <div>
+                <div className="font-mono text-[9px] tracking-widest text-zinc-500 uppercase">
+                  Total Planned Time
+                </div>
+                <div className="text-xs font-mono font-bold text-white">
+                  {Math.floor(
+                    Array.from({ length: totalPages }, (_, i) => getSlideTarget(i + 1)).reduce((a, b) => a + b, 0) / 60
+                  )}m {
+                    Array.from({ length: totalPages }, (_, i) => getSlideTarget(i + 1)).reduce((a, b) => a + b, 0) % 60
+                  }s
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="px-4 py-2 rounded-xl bg-white hover:bg-zinc-200 text-black font-mono text-xs font-semibold transition-all cursor-pointer shadow-md active:scale-95"
+              >
+                Done
+              </button>
+            </div>
+          </aside>
         </div>
       )}
 
