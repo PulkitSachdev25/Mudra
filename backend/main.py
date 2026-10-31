@@ -2,6 +2,7 @@ import os
 import random
 import json
 import logging
+import re
 from datetime import datetime
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
@@ -219,11 +220,25 @@ async def websocket_endpoint(websocket: WebSocket, room_code: str, client_type: 
         logger.error(f"WebSocket error: {e}")
         await manager.unregister_socket(room_code, client_type, websocket)
 
+def filter_filler_words(text: str) -> str:
+    """
+    Strips out vocal filler words (um, uh, like, you know, etc.)
+    and verbal repetitions from the transcript.
+    """
+    if not text:
+        return ""
+    pattern = r'\b(um+|uh+|er+|ah+|like|you know|basically|literally|i mean)\b'
+    cleaned = re.sub(pattern, '', text, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\b(but|and|so)\s+(but|and|so)\b', r'\1', cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+    return cleaned
+
 @app.post("/api/summarize")
 async def summarize_action_snap(req: SummarizeRequest):
     timestamp = datetime.now().strftime("%I:%M %p")
     card_id = f"mom-{int(datetime.now().timestamp() * 1000)}"
-    transcript_text = (req.transcript or "").strip()
+    raw_transcript = (req.transcript or "").strip()
+    cleaned_transcript = filter_filler_words(raw_transcript)
     
     # Try calling Google Gemini API if key is available
     api_key = os.environ.get("GEMINI_API_KEY", "")
@@ -235,59 +250,77 @@ async def summarize_action_snap(req: SummarizeRequest):
             from google.genai import types
 
             client = genai.Client(api_key=api_key)
-            prompt = f"""You are Mudrā AI Meeting Minutes assistant. The speaker just triggered a key meeting minutes snap on Slide {req.slide_index}.
-Here is the spoken audio transcript from the speaker around this moment:
-"{transcript_text if transcript_text else 'Discussion regarding this slide architecture and implementation.'}"
+            prompt = f"""You are the Mudrā Spatial Presentation Assistant.
+The presenter just triggered an Action Snap for Slide {req.slide_index}.
+Here is the verbatim spoken audio transcript captured over the last 30 seconds of the presentation:
+"{cleaned_transcript if cleaned_transcript else 'Key discussion and architecture review for Slide ' + str(req.slide_index)}"
 
-Generate a crisp, structured JSON with:
-1. "title": A short 3-5 word topic title.
-2. "takeaway": 1-2 sentence core discussion takeaway.
-3. "action_items": An array of 2 actionable bullet points.
+Instructions:
+1. Filter out all filler words (such as um, uh, like, you know, etc.), stuttering, or unnecessary verbal clutter.
+2. Convert the actual words and discussion said in those 30 seconds into 2 to 4 clear, readable, concise bullet points capturing what was discussed.
+3. Provide a concise 3-5 word topic title.
 
-Return ONLY valid JSON matching this structure:
+Return ONLY a valid JSON object matching this schema:
 {{
-  "title": "string",
-  "takeaway": "string",
-  "action_items": ["string", "string"]
+  "title": "Short 3-5 word topic title",
+  "bullet_points": [
+    "First clear concise bullet point",
+    "Second clear concise bullet point"
+  ]
 }}"""
 
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
-                )
-            )
-            parsed = json.loads(response.text)
-            summary_data = {
-                "title": parsed.get("title", f"Key Takeaway - Slide {req.slide_index}"),
-                "takeaway": parsed.get("takeaway", "Key architectural principle established."),
-                "action_items": parsed.get("action_items", ["Follow up on slide items", "Review implementation details"])
-            }
+            # Prefer high-throughput flash models with optimal rate limits
+            candidate_models = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.8-flash"]
+            last_err = None
+
+            for model_name in candidate_models:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            response_mime_type="application/json"
+                        )
+                    )
+                    parsed = json.loads(response.text)
+                    bullets = parsed.get("bullet_points", [])
+                    if not bullets and "takeaway" in parsed:
+                        bullets = [parsed["takeaway"]]
+                    if bullets:
+                        summary_data = {
+                            "title": parsed.get("title", f"Slide {req.slide_index} Takeaways"),
+                            "bullet_points": bullets
+                        }
+                        logger.info(f"Generated MOM summary using {model_name}")
+                        break
+                except Exception as err:
+                    last_err = err
+                    logger.warning(f"Model {model_name} failed: {err}")
+                    continue
+
         except Exception as e:
             logger.warning(f"Gemini API call failed, using heuristic summary: {e}")
 
     if not summary_data:
         # High quality heuristic generator when offline or no API key provided
-        if transcript_text:
-            first_sentence = transcript_text.split('.')[0]
+        if cleaned_transcript:
+            sentences = [s.strip() for s in re.split(r'[.!?]+', cleaned_transcript) if len(s.strip()) > 6]
+            bullet_points = sentences[:3] if sentences else [cleaned_transcript]
             summary_data = {
-                "title": "Key Decision & Takeaway",
-                "takeaway": first_sentence if len(first_sentence) > 10 else f"Crucial insights discussed for Slide {req.slide_index}.",
-                "action_items": [
-                    "Implement the discussed pipeline parameters",
-                    "Coordinate across presenter and audience interfaces"
-                ]
+                "title": "Discussion Summary",
+                "bullet_points": bullet_points
             }
         else:
             summary_data = {
                 "title": "Discussion Summary",
-                "takeaway": f"Recorded discussion point on Slide {req.slide_index}.",
-                "action_items": [
-                    "Follow up on presentation action items",
-                    "Review slide visual and architecture notes"
+                "bullet_points": [
+                    f"Recorded presentation points for Slide {req.slide_index}.",
+                    "Discussion insights captured directly from stage audio."
                 ]
             }
+
+    takeaway_bullets = summary_data["bullet_points"]
+    takeaway_text = "\n".join(f"• {bp}" for bp in takeaway_bullets)
 
     card = {
         "id": card_id,
@@ -295,9 +328,9 @@ Return ONLY valid JSON matching this structure:
         "slide_index": req.slide_index,
         "image_data": req.image_data,
         "title": summary_data["title"],
-        "takeaway": summary_data["takeaway"],
-        "action_items": summary_data["action_items"],
-        "transcript_raw": transcript_text
+        "takeaway": takeaway_text,
+        "takeaway_bullets": takeaway_bullets,
+        "transcript_raw": raw_transcript
     }
 
     # Store and broadcast to audience

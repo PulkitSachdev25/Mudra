@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { CheckSquare, MessageSquare, Clock, ExternalLink } from 'lucide-react';
+import { MessageSquare, Clock, ExternalLink } from 'lucide-react';
 
 function CornerCrosshairs() {
   return (
@@ -24,6 +24,15 @@ export default function MOMCardItem({
   const canvasRef = useRef(null);
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef(null);
+
+  // Extract clean bullet points from card data
+  const takeawayBullets = Array.isArray(card.takeaway_bullets) && card.takeaway_bullets.length > 0
+    ? card.takeaway_bullets
+    : (typeof card.takeaway === 'string' && card.takeaway.includes('•'))
+      ? card.takeaway.split('•').map((s) => s.trim()).filter(Boolean)
+      : (typeof card.takeaway === 'string' && card.takeaway.includes('\n'))
+        ? card.takeaway.split('\n').map((s) => s.replace(/^[•\-\*]\s*/, '').trim()).filter(Boolean)
+        : (card.takeaway && card.takeaway.trim() ? [card.takeaway.trim()] : []);
 
   // Sync image snapshot onto canvas as background
   useEffect(() => {
@@ -282,33 +291,26 @@ export default function MOMCardItem({
         {/* Right: AI Summary & Personal Note */}
         <div className="flex flex-col justify-between">
           <div className="space-y-4">
-            {/* Core Takeaway */}
-            <div className="p-3.5 rounded-xl bg-zinc-900/40 border border-zinc-800">
-              <div className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase mb-1">
+            {/* Core Takeaway as Proper Bullet Points */}
+            <div className="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800">
+              <div className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase mb-2.5">
                 [CORE_TAKEAWAY]
               </div>
-              <p className="text-xs text-zinc-300 leading-relaxed font-sans">
-                {card.takeaway}
-              </p>
-            </div>
-
-            {/* Action Items */}
-            {card.action_items && card.action_items.length > 0 && (
-              <div className="p-3.5 rounded-xl bg-zinc-900/40 border border-zinc-800">
-                <div className="flex items-center gap-1.5 font-mono text-[10px] tracking-widest text-zinc-500 uppercase mb-2">
-                  <CheckSquare className="w-3.5 h-3.5 text-zinc-500" />
-                  <span>Action Items</span>
-                </div>
-                <ul className="space-y-1.5 text-xs text-zinc-300">
-                  {card.action_items.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-zinc-500 font-mono shrink-0 select-none">-</span>
-                      <span className="font-sans text-xs text-zinc-300">{item}</span>
+              {takeawayBullets.length > 0 ? (
+                <ul className="space-y-2">
+                  {takeawayBullets.map((bullet, idx) => (
+                    <li key={idx} className="flex items-start gap-2.5">
+                      <span className="text-zinc-500 font-mono text-xs shrink-0 select-none">-</span>
+                      <span className="font-sans text-xs text-zinc-300 leading-relaxed">{bullet}</span>
                     </li>
                   ))}
                 </ul>
-              </div>
-            )}
+              ) : (
+                <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                  {card.takeaway || 'Discussion takeaways captured for this slide.'}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Attendee Personal Note Input */}

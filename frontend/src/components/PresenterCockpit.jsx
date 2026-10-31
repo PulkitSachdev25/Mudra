@@ -142,7 +142,8 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
 
     setMomToast('Action Snap Captured! Synthesizing AI Minutes...');
     const imageData = canvas.toDataURL('image/jpeg', 0.88);
-    const transcript = getRecentTranscript(60);
+    // Take audio transcript of the last 30 seconds
+    const transcript = getRecentTranscript(30);
 
     try {
       const res = await fetch(getApiUrl('/api/summarize'), {
