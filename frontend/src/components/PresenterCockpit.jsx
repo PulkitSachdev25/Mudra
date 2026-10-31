@@ -6,11 +6,10 @@ import {
   ChevronLeft, ChevronRight, Upload, Presentation, 
   Maximize2, Minimize2, LogOut, Users, Wifi, Sparkles,
   Copy, Check, BarChart2, Clock, CheckCircle2,
-  Menu, X
+  Menu, X, MessageSquare
 } from 'lucide-react';
 
 import { useMediaPipeGestures } from '../hooks/useMediaPipeGestures';
-import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { soundEngine } from '../utils/soundEffects';
 import { getApiUrl } from '../config/api';
 import SessionReportModal from './SessionReportModal';
@@ -39,6 +38,9 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
   const currentLinkRef = useRef(null);
   const [copiedRoomCode, setCopiedRoomCode] = useState(false);
 
+  // Audience Doubts & Q&A state
+  const [questions, setQuestions] = useState([]);
+
   const handleCopyRoomCode = () => {
     if (roomCode) {
       navigator.clipboard.writeText(roomCode);
@@ -55,6 +57,17 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     clientType: 'presenter',
     onMessage: (msg) => {
       console.log('[PresenterCockpit] Received socket message', msg);
+      if (msg.type === 'INIT_STATE') {
+        if (msg.questions) setQuestions(msg.questions);
+      } else if (msg.type === 'QUESTION_ADDED') {
+        if (msg.question) {
+          setQuestions((prev) => [msg.question, ...prev.filter((q) => q.id !== msg.question.id)]);
+        }
+      } else if (msg.type === 'QUESTION_UPVOTED') {
+        setQuestions((prev) =>
+          prev.map((q) => (q.id === msg.question_id ? { ...q, votes: msg.votes } : q))
+        );
+      }
     }
   });
 
@@ -195,15 +208,6 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
 
   const [momToast, setMomToast] = useState('');
 
-  // Continuous speech recognition rolling buffer and presentation telemetry
-  const { 
-    isListening, 
-    getRecentTranscript, 
-    getFullTranscript, 
-    fillerCounts, 
-    totalFillerWords 
-  } = useSpeechRecognition({ active: true });
-
   // Calculate cumulative time spent up to this exact moment
   const getComputedSlideDurations = useCallback(() => {
     const now = Date.now();
@@ -241,7 +245,6 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     }
     const pacingAcc = calculatePacingAccuracy(computedTimes, allTargets);
     const totalSecs = (Date.now() - sessionStartTimeRef.current) / 1000;
-    const fullTranscript = getFullTranscript();
 
     try {
       const res = await fetch(getApiUrl('/api/session-report'), {
@@ -252,10 +255,7 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
           total_duration_seconds: totalSecs,
           slide_durations: computedTimes,
           target_durations: allTargets,
-          filler_word_counts: fillerCounts,
-          total_filler_words: totalFillerWords,
           pacing_accuracy_percent: pacingAcc,
-          full_transcript: fullTranscript,
         }),
       });
 
@@ -268,31 +268,29 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     } catch (err) {
       console.warn('Backend session report failed, generating client fallback:', err);
       setReportData({
-        flow_score: Math.min(98, Math.max(50, Math.round(pacingAcc * 0.75 + Math.max(0, 25 - totalFillerWords * 2)))),
-        filler_word_count: totalFillerWords,
+        flow_score: Math.min(98, Math.max(60, Math.round(pacingAcc * 0.9))),
+        filler_word_count: 0,
         pacing_critique: `Rhythmic pacing maintained across slides with ${pacingAcc}% cadence adherence.`,
-        confidence_rating: totalFillerWords < 5 ? 'Authoritative' : totalFillerWords < 12 ? 'Conversational' : 'Hesitant',
-        improvement_vs_benchmark: `${Math.max(15, 75 - totalFillerWords * 4)}% cleaner speech delivery than technical baseline`,
+        confidence_rating: 'Authoritative',
+        improvement_vs_benchmark: `Targeted slide time budgets adhered to with ${pacingAcc}% fidelity`,
         actionable_coaching_cues: [
           'Calibrate time distribution evenly across core architecture slides.',
-          'Introduce intentional micro-pauses instead of verbal transitions.'
+          'Maintain visual rhythm while transitioning key discussion points.'
         ],
         pacing_accuracy_percent: pacingAcc,
       });
     } finally {
       setIsGeneratingReport(false);
     }
-  }, [isGeneratingReport, getComputedSlideDurations, calculatePacingAccuracy, targetDurations, getFullTranscript, roomCode, fillerCounts, totalFillerWords]);
+  }, [isGeneratingReport, getComputedSlideDurations, calculatePacingAccuracy, targetDurations, roomCode, totalPages, getSlideTarget]);
 
-  // Handle MOM snapshot trigger
+  // Handle MOM snapshot trigger (Peace sign gesture) - Gemini Vision analysis
   const handleMOMSnapTrigger = useCallback(async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    setMomToast('Action Snap Captured! Synthesizing AI Minutes...');
+    setMomToast('Action Snap Captured! Synthesizing AI Minutes via Gemini Vision...');
     const imageData = canvas.toDataURL('image/jpeg', 0.88);
-    // Take audio transcript of the last 30 seconds
-    const transcript = getRecentTranscript(30);
 
     try {
       const res = await fetch(getApiUrl('/api/summarize'), {
@@ -302,7 +300,6 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
           room_code: roomCode,
           slide_index: currentSlide,
           image_data: imageData,
-          transcript: transcript,
         }),
       });
 
@@ -321,7 +318,7 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     setTimeout(() => {
       setMomToast('');
     }, 3500);
-  }, [roomCode, currentSlide, getRecentTranscript, onTriggerMOMSnap]);
+  }, [roomCode, currentSlide, onTriggerMOMSnap]);
 
   // In-Browser MediaPipe Hand Gesture Engine
   const { visionStatus, cameraPermission, modelLoaded, detectedGestureLabel, videoRef } = useMediaPipeGestures({
@@ -457,12 +454,17 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
           <button
             onClick={() => setIsSidebarOpen(true)}
             className="flex items-center gap-2 glass-panel px-3.5 py-2 rounded-xl border border-white/10 hover:border-zinc-400 text-zinc-300 hover:text-white transition-all cursor-pointer group active:scale-95"
-            title="Open Slide Pacing Sidebar (Set time per slide)"
+            title="Open Slide Pacing & Q&A Sidebar"
           >
             <Menu className="w-4 h-4 text-zinc-400 group-hover:text-white transition-colors" />
             <span className="text-xs font-mono tracking-wider font-semibold">
               Slides ({totalPages})
             </span>
+            {questions.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-white text-black font-bold text-[10px]">
+                {questions.length}
+              </span>
+            )}
           </button>
 
           {/* Room Code with Copy Option */}
@@ -807,6 +809,69 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
                   </div>
                 );
               })}
+
+              {/* AUDIENCE Q&A FORUM SECTION (UNDER SLIDES) */}
+              <div className="pt-6 mt-4 border-t border-zinc-800/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-sky-400" />
+                    <div>
+                      <div className="font-mono text-[9px] tracking-widest text-zinc-500 uppercase">
+                        [AUDIENCE_QNA_FORUM]
+                      </div>
+                      <h4 className="text-xs font-semibold text-white tracking-wide">
+                        Doubts & Questions ({questions.length})
+                      </h4>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-500">
+                    Ranked by Votes
+                  </span>
+                </div>
+
+                {questions.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-zinc-950/60 border border-zinc-800/80 text-center text-zinc-500 text-xs font-mono">
+                    No audience doubts asked yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {[...questions]
+                      .sort((a, b) => (b.votes || 0) - (a.votes || 0))
+                      .map((q) => (
+                        <div
+                          key={q.id}
+                          className="p-3 rounded-xl bg-zinc-950/90 border border-zinc-800 hover:border-zinc-700 transition-all space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="px-1.5 py-0.5 rounded font-mono text-[9px] font-bold bg-zinc-900 text-zinc-400 border border-zinc-800">
+                              Slide #{q.slide_index}
+                            </span>
+                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-zinc-900 border border-zinc-800 font-mono text-xs">
+                              <span className="text-emerald-400 font-bold">▲</span>
+                              <span className="font-bold text-white">{q.votes || 1} votes</span>
+                            </div>
+                          </div>
+
+                          <p className="text-xs font-medium text-white font-sans">
+                            {q.question}
+                          </p>
+
+                          {q.ai_answer && (
+                            <div className="p-2 rounded-lg bg-zinc-900/60 border border-zinc-800/80 space-y-0.5">
+                              <div className="text-[9px] font-mono tracking-wider uppercase text-sky-400 flex items-center gap-1">
+                                <Sparkles className="w-2.5 h-2.5 text-sky-400" />
+                                <span>Gemini 1-2 Line Answer</span>
+                              </div>
+                              <p className="text-[11px] text-zinc-300 font-sans leading-relaxed">
+                                {q.ai_answer}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Footer Summary */}

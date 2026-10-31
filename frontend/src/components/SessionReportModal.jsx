@@ -114,19 +114,19 @@ export default function SessionReportModal({
               </span>
             </div>
 
-            {/* Filler Words Count */}
+            {/* Slides Navigated */}
             <div className="p-4 rounded-xl bg-zinc-900/40 border border-zinc-800 flex flex-col justify-between">
               <span className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase">
-                [FILLER_WORDS]
+                [SLIDES_COVERED]
               </span>
               <div className="mt-2 flex items-baseline gap-1">
                 <span className="text-3xl font-mono font-bold text-white tracking-tight">
-                  {totalFillerWords}
+                  {slideKeys.length}
                 </span>
-                <span className="text-xs font-mono text-zinc-500">detected</span>
+                <span className="text-xs font-mono text-zinc-500">slides</span>
               </div>
               <span className="text-[11px] text-zinc-400 font-sans mt-1">
-                Real-time speech listener
+                Delivered on stage
               </span>
             </div>
 
@@ -222,34 +222,24 @@ export default function SessionReportModal({
             </div>
           </div>
 
-          {/* Filler Word Matrix & Benchmark Row */}
+          {/* Stage Delivery & Benchmark Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Filler Word Breakdown */}
+            {/* Stage Delivery Highlights */}
             <div className="p-4 rounded-xl bg-zinc-900/30 border border-zinc-800 space-y-3">
               <div className="font-mono text-[10px] tracking-widest text-zinc-500 uppercase flex items-center justify-between">
-                <span>[FILLER_WORD_TALLY]</span>
-                <span className="text-zinc-400">CLIENT-SIDE AUDIO MONITOR</span>
+                <span>[VISION_STAGE_DELIVERY]</span>
+                <span className="text-zinc-400">GEMINI VISION SYNTHESIS</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {Object.entries({
-                  um: fillerCounts.um || 0,
-                  uh: fillerCounts.uh || 0,
-                  like: fillerCounts.like || 0,
-                  basically: fillerCounts.basically || 0,
-                  'you know': fillerCounts.you_know || 0,
-                  literally: fillerCounts.literally || 0,
-                  actually: fillerCounts.actually || 0,
-                  'i mean': fillerCounts.i_mean || 0,
-                }).map(([word, count]) => (
-                  <div
-                    key={word}
-                    className="px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-between"
-                  >
-                    <span className="text-[11px] font-sans text-zinc-400">{word}</span>
-                    <span className="text-xs font-mono font-bold text-white">{count}</span>
-                  </div>
-                ))}
+              <div className="space-y-2 text-xs font-sans text-zinc-300">
+                <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-between">
+                  <span className="text-zinc-400">Peace Sign MoM Snaps:</span>
+                  <span className="font-mono font-bold text-white">Gemini Vision Active</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-between">
+                  <span className="text-zinc-400">Target Cadence Adherence:</span>
+                  <span className="font-mono font-bold text-emerald-400">{Math.round(pacing_accuracy_percent)}%</span>
+                </div>
               </div>
             </div>
 

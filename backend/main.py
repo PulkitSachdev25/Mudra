@@ -3,6 +3,7 @@ import random
 import json
 import logging
 import re
+import base64
 from datetime import datetime
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
@@ -59,6 +60,7 @@ class RoomManager:
             "audience": [],
             "current_slide": 1,
             "mom_cards": [],
+            "questions": [],
             "created_at": datetime.now().isoformat()
         }
         logger.info(f"Created room {code}")
@@ -72,17 +74,28 @@ class RoomManager:
             self.create_room(room_code)
         
         room = self.rooms[room_code]
+        if "questions" not in room:
+            room["questions"] = []
+
         if client_type == "presenter":
             room["presenter"] = websocket
             logger.info(f"Presenter connected to room {room_code}")
-        else:
-            room["audience"].append(websocket)
-            logger.info(f"Audience connected to room {room_code}. Total audience: {len(room['audience'])}")
-            # Send current state and existing MOM cards to new audience member
             await websocket.send_text(json.dumps({
                 "type": "INIT_STATE",
                 "current_slide": room["current_slide"],
                 "mom_cards": room["mom_cards"],
+                "questions": room["questions"],
+                "audience_count": len(room["audience"])
+            }))
+        else:
+            room["audience"].append(websocket)
+            logger.info(f"Audience connected to room {room_code}. Total audience: {len(room['audience'])}")
+            # Send current state, MOM cards, and Q&A questions to new audience member
+            await websocket.send_text(json.dumps({
+                "type": "INIT_STATE",
+                "current_slide": room["current_slide"],
+                "mom_cards": room["mom_cards"],
+                "questions": room["questions"],
                 "audience_count": len(room["audience"])
             }))
             # Notify presenter of new count
@@ -219,6 +232,43 @@ async def websocket_endpoint(websocket: WebSocket, room_code: str, client_type: 
                         "card": card
                     })
 
+                elif msg_type == "ASK_QUESTION":
+                    slide_index = payload.get("slide_index", 1)
+                    question_text = (payload.get("question") or "").strip()
+                    author = payload.get("author", "Audience Member")
+                    if question_text and room_code in manager.rooms:
+                        ai_answer = get_gemini_qa_answer(question_text, slide_index)
+                        q_obj = {
+                            "id": f"q_{int(datetime.now().timestamp() * 1000)}_{random.randint(100, 999)}",
+                            "slide_index": slide_index,
+                            "question": question_text,
+                            "author": author,
+                            "votes": 1,
+                            "ai_answer": ai_answer,
+                            "timestamp": datetime.now().strftime("%I:%M %p")
+                        }
+                        if "questions" not in manager.rooms[room_code]:
+                            manager.rooms[room_code]["questions"] = []
+                        manager.rooms[room_code]["questions"].append(q_obj)
+                        await manager.broadcast_to_all(room_code, {
+                            "type": "QUESTION_ADDED",
+                            "question": q_obj
+                        })
+
+                elif msg_type == "UPVOTE_QUESTION":
+                    q_id = payload.get("question_id")
+                    if q_id and room_code in manager.rooms:
+                        questions = manager.rooms[room_code].get("questions", [])
+                        for q in questions:
+                            if q["id"] == q_id:
+                                q["votes"] = q.get("votes", 0) + 1
+                                await manager.broadcast_to_all(room_code, {
+                                    "type": "QUESTION_UPVOTED",
+                                    "question_id": q_id,
+                                    "votes": q["votes"]
+                                })
+                                break
+
                 elif msg_type == "PING":
                     await websocket.send_text(json.dumps({"type": "PONG"}))
 
@@ -243,94 +293,111 @@ def filter_filler_words(text: str) -> str:
     cleaned = re.sub(r'\s+', ' ', cleaned).strip()
     return cleaned
 
+def get_gemini_qa_answer(question_text: str, slide_index: int = 1) -> str:
+    """
+    Synthesize an authoritative, direct 1-2 line answer to audience doubts using Gemini API.
+    """
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if not api_key:
+        return "Answer queued for presenter live response."
+    
+    try:
+        from google import genai
+        client = genai.Client(api_key=api_key)
+        prompt = f"""You are the Mudrā Presentation AI Assistant. An attendee asked this question during Slide {slide_index}:
+"{question_text}"
+
+Provide a crisp, direct, and helpful answer in exactly 1 to 2 lines. Do not use conversational greetings, filler, or preamble."""
+
+        candidate_models = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.8-flash"]
+        for m in candidate_models:
+            try:
+                res = client.models.generate_content(model=m, contents=prompt)
+                if res.text and res.text.strip():
+                    return res.text.strip()
+            except Exception:
+                continue
+    except Exception as e:
+        logger.warning(f"Failed to generate Gemini Q&A answer: {e}")
+
+    return "Answer queued for presenter live response."
+
 @app.post("/api/summarize")
 async def summarize_action_snap(req: SummarizeRequest):
     timestamp = datetime.now().strftime("%I:%M %p")
     card_id = f"mom-{int(datetime.now().timestamp() * 1000)}"
-    raw_transcript = (req.transcript or "").strip()
-    cleaned_transcript = filter_filler_words(raw_transcript)
     
-    # Try calling Google Gemini API if key is available
+    # Analyze slide visually with Google Gemini Vision API (Zero audio dependency)
     api_key = os.environ.get("GEMINI_API_KEY", "")
     summary_data = None
 
-    if api_key:
+    if api_key and req.image_data:
         try:
             from google import genai
             from google.genai import types
 
             client = genai.Client(api_key=api_key)
-            prompt = f"""You are the Mudrā Spatial Presentation Assistant.
-The presenter just triggered an Action Snap for Slide {req.slide_index}.
-Here is the verbatim spoken audio transcript captured over the last 30 seconds of the presentation:
-"{cleaned_transcript if cleaned_transcript else 'Key discussion and architecture review for Slide ' + str(req.slide_index)}"
+            
+            # Extract base64 image bytes from canvas
+            header, encoded = req.image_data.split(",", 1) if "," in req.image_data else ("", req.image_data)
+            image_bytes = base64.b64decode(encoded)
+            img_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
 
-Instructions:
-1. Filter out all filler words (such as um, uh, like, you know, etc.), stuttering, or unnecessary verbal clutter.
-2. Convert the actual words and discussion said in those 30 seconds into 2 to 4 clear, readable, concise bullet points capturing what was discussed.
-3. Provide a concise 3-5 word topic title.
+            prompt = f"""You are analyzing a presentation slide image captured during Slide {req.slide_index}.
+Extract and return a valid JSON object with the following fields directly from the visual content of the slide:
+1. "title": A concise 3 to 5 word title summarizing the slide topic.
+2. "core_takeaway": The single most important concept, principle, or message on the slide.
+3. "metrics": An array of important numbers, percentages, or statistics found on the slide and an explanation of what they mean (e.g. ["99.9% - System availability uptime", "10x - Speed improvement"]). If no numbers or metrics are shown on the slide, return an empty array [].
+4. "links": An array of web URLs or domain links found on the slide (e.g. ["https://..."]). If there are 0 links on the slide, return an empty array [].
+5. "action_points": An array of 2 to 3 actionable next steps, key points, or practical takeaways from this slide.
 
 Return ONLY a valid JSON object matching this schema:
 {{
-  "title": "Short 3-5 word topic title",
-  "bullet_points": [
-    "First clear concise bullet point",
-    "Second clear concise bullet point"
-  ]
+  "title": "string",
+  "core_takeaway": "string",
+  "metrics": ["string"],
+  "links": ["string"],
+  "action_points": ["string"]
 }}"""
 
-            # Prefer high-throughput flash models with optimal rate limits
             candidate_models = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.8-flash"]
-            last_err = None
-
             for model_name in candidate_models:
                 try:
                     response = client.models.generate_content(
                         model=model_name,
-                        contents=prompt,
-                        config=types.GenerateContentConfig(
-                            response_mime_type="application/json"
-                        )
+                        contents=[img_part, prompt],
+                        config=types.GenerateContentConfig(response_mime_type="application/json")
                     )
                     parsed = json.loads(response.text)
-                    bullets = parsed.get("bullet_points", [])
-                    if not bullets and "takeaway" in parsed:
-                        bullets = [parsed["takeaway"]]
-                    if bullets:
+                    if "core_takeaway" in parsed:
                         summary_data = {
-                            "title": parsed.get("title", f"Slide {req.slide_index} Takeaways"),
-                            "bullet_points": bullets
+                            "title": parsed.get("title", f"Slide {req.slide_index} Insights"),
+                            "core_takeaway": str(parsed.get("core_takeaway", "Core slide takeaway captured.")),
+                            "metrics": [m for m in parsed.get("metrics", []) if m],
+                            "links": [l for l in parsed.get("links", []) if l],
+                            "action_points": [a for a in parsed.get("action_points", []) if a]
                         }
-                        logger.info(f"Generated MOM summary using {model_name}")
+                        logger.info(f"Generated slide vision summary using {model_name}")
                         break
                 except Exception as err:
-                    last_err = err
-                    logger.warning(f"Model {model_name} failed: {err}")
+                    logger.warning(f"Vision model {model_name} failed: {err}")
                     continue
 
         except Exception as e:
-            logger.warning(f"Gemini API call failed, using heuristic summary: {e}")
+            logger.warning(f"Gemini slide vision call failed: {e}")
 
     if not summary_data:
-        # High quality heuristic generator when offline or no API key provided
-        if cleaned_transcript:
-            sentences = [s.strip() for s in re.split(r'[.!?]+', cleaned_transcript) if len(s.strip()) > 6]
-            bullet_points = sentences[:3] if sentences else [cleaned_transcript]
-            summary_data = {
-                "title": "Discussion Summary",
-                "bullet_points": bullet_points
-            }
-        else:
-            summary_data = {
-                "title": "Discussion Summary",
-                "bullet_points": [
-                    f"Recorded presentation points for Slide {req.slide_index}.",
-                    "Discussion insights captured directly from stage audio."
-                ]
-            }
-
-    takeaway_bullets = summary_data["bullet_points"]
-    takeaway_text = "\n".join(f"• {bp}" for bp in takeaway_bullets)
+        # High quality visual fallback
+        summary_data = {
+            "title": f"Slide {req.slide_index} Overview",
+            "core_takeaway": f"Core takeaway and architectural takeaways for Slide {req.slide_index}.",
+            "metrics": [],
+            "links": [],
+            "action_points": [
+                f"Review Slide {req.slide_index} key principles",
+                "Synthesize takeaways across presenter and audience interfaces"
+            ]
+        }
 
     card = {
         "id": card_id,
@@ -338,9 +405,12 @@ Return ONLY a valid JSON object matching this schema:
         "slide_index": req.slide_index,
         "image_data": req.image_data,
         "title": summary_data["title"],
-        "takeaway": takeaway_text,
-        "takeaway_bullets": takeaway_bullets,
-        "transcript_raw": raw_transcript
+        "core_takeaway": summary_data["core_takeaway"],
+        "metrics": summary_data["metrics"],
+        "links": summary_data["links"],
+        "action_points": summary_data["action_points"],
+        "takeaway": summary_data["core_takeaway"],
+        "takeaway_bullets": summary_data["action_points"]
     }
 
     # Store and broadcast to audience
