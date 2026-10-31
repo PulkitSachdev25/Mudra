@@ -350,6 +350,16 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     renderCurrentSlide();
   }, [renderCurrentSlide]);
 
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen().catch(err => console.warn(err));
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen().catch(err => console.warn(err));
+      setIsFullscreen(false);
+    }
+  }, []);
+
   // Keyboard navigation fallback
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -365,7 +375,7 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nextSlide, prevSlide]);
+  }, [nextSlide, prevSlide, toggleFullscreen]);
 
   // Handle PDF file upload
   const handleFileUpload = async (e) => {
@@ -390,16 +400,6 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     setTotalPages(SAMPLE_SLIDES.length);
     setCurrentSlide(1);
     sendMessage({ type: 'SLIDE_UPDATE', slide: 1 });
-  };
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      containerRef.current?.requestFullscreen().catch(err => console.warn(err));
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen().catch(err => console.warn(err));
-      setIsFullscreen(false);
-    }
   };
 
   // Automatically scan the active slide for hyperlinks (supports both PDF documents and sample keynote)
@@ -908,8 +908,6 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
         reportData={reportData}
         slideDurations={getComputedSlideDurations()}
         targetDurations={targetDurations}
-        fillerCounts={fillerCounts}
-        totalFillerWords={totalFillerWords}
         roomCode={roomCode}
       />
     </div>
