@@ -31,6 +31,16 @@ class SummarizeRequest(BaseModel):
     image_data: str  # base64 data url
     transcript: Optional[str] = ""
 
+class SessionReportRequest(BaseModel):
+    room_code: str
+    total_duration_seconds: float
+    slide_durations: Dict[str, float]
+    target_durations: Dict[str, float]
+    filler_word_counts: Dict[str, int]
+    total_filler_words: int
+    pacing_accuracy_percent: float
+    full_transcript: Optional[str] = ""
+
 class RoomManager:
     def __init__(self):
         # room_code -> { "presenter": WebSocket, "audience": [WebSocket], "current_slide": int, "mom_cards": [] }
@@ -342,3 +352,130 @@ Return ONLY a valid JSON object matching this schema:
         })
 
     return {"status": "success", "card": card}
+
+@app.post("/api/session-report")
+async def generate_session_report(req: SessionReportRequest):
+    # Format slide pacing lines for telemetry analysis
+    slide_summary_lines = []
+    worst_overstay = None
+    worst_rush = None
+    max_overstay_pct = 0
+    max_rush_pct = 0
+
+    for slide_key, actual_sec in sorted(req.slide_durations.items(), key=lambda x: int(x[0]) if x[0].isdigit() else str(x[0])):
+        target_sec = req.target_durations.get(slide_key, 60.0)
+        actual_min = actual_sec / 60.0
+        target_min = target_sec / 60.0
+        diff_pct = ((actual_sec - target_sec) / target_sec) * 100 if target_sec > 0 else 0
+        status_str = f"+{diff_pct:.0f}% over" if diff_pct > 0 else f"{diff_pct:.0f}% under" if diff_pct < 0 else "on target"
+        slide_summary_lines.append(f"Slide {slide_key}: {actual_sec:.0f}s ({actual_min:.1f}m) vs target {target_sec:.0f}s ({target_min:.1f}m) [{status_str}]")
+
+        if diff_pct > max_overstay_pct:
+            max_overstay_pct = diff_pct
+            worst_overstay = slide_key
+        elif diff_pct < -max_rush_pct:
+            max_rush_pct = abs(diff_pct)
+            worst_rush = slide_key
+
+    slide_summary_text = "\n".join(slide_summary_lines) if slide_summary_lines else "Single slide session."
+    filler_breakdown_text = ", ".join(f"{k}: {v}" for k, v in req.filler_word_counts.items() if v > 0) or "Zero filler words detected."
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    report_data = None
+
+    if api_key:
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=api_key)
+            prompt = f"""You are the Mudrā Presentation Coach & Telemetry Analyst.
+Analyze this presentation session telemetry:
+
+Total Session Duration: {req.total_duration_seconds:.0f} seconds ({req.total_duration_seconds / 60:.1f} minutes)
+Calculated Pacing Accuracy: {req.pacing_accuracy_percent:.1f}%
+Slide Timing Breakdown:
+{slide_summary_text}
+
+Total Filler Words Counted: {req.total_filler_words}
+Filler Words Breakdown: {filler_breakdown_text}
+
+Spoken Presentation Transcript:
+"{req.full_transcript if req.full_transcript else 'Technical presentation delivered without verbal audio transcript.'}"
+
+Instructions:
+1. Provide a professional, encouraging analysis.
+2. CRITICAL CONSTRAINT: Do NOT assign letter grades (no A, B, C, D, or F) as they can be demoralizing. Focus on percentages, confidence levels, and technical cadence.
+3. Compute an overall flow_score between 1 and 100 based on rhythm, verbal fluency, and pacing.
+4. Provide a concise pacing_critique highlighting specific slides where the speaker rushed or overstayed.
+5. Provide a confidence_rating (such as "Authoritative", "Conversational", "Deliberate", "Hesitant").
+6. Provide an improvement_vs_benchmark comparing filler words and cadence to standard technical conference talks.
+7. Provide 2 to 4 actionable_coaching_cues for future rehearsal.
+
+Return ONLY a valid JSON object matching this schema:
+{{
+  "flow_score": 85,
+  "filler_word_count": {req.total_filler_words},
+  "pacing_critique": "string",
+  "confidence_rating": "string",
+  "improvement_vs_benchmark": "string",
+  "actionable_coaching_cues": ["string", "string"]
+}}"""
+
+            candidate_models = ["gemini-3-flash-preview", "gemini-flash-latest", "gemini-3.8-flash"]
+            for model_name in candidate_models:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(response_mime_type="application/json")
+                    )
+                    parsed = json.loads(response.text)
+                    if "flow_score" in parsed and "pacing_critique" in parsed:
+                        report_data = {
+                            "flow_score": int(parsed.get("flow_score", 85)),
+                            "filler_word_count": int(parsed.get("filler_word_count", req.total_filler_words)),
+                            "pacing_critique": str(parsed.get("pacing_critique", "Balanced delivery across slides.")),
+                            "confidence_rating": str(parsed.get("confidence_rating", "Conversational")),
+                            "improvement_vs_benchmark": str(parsed.get("improvement_vs_benchmark", "Strong presentation rhythm.")),
+                            "actionable_coaching_cues": parsed.get("actionable_coaching_cues", [
+                                "Maintain steady cadence on transition slides",
+                                "Pause silently rather than using verbal fillers"
+                            ])
+                        }
+                        logger.info(f"Generated session report via {model_name}")
+                        break
+                except Exception as err:
+                    logger.warning(f"Session report call on {model_name} failed: {err}")
+                    continue
+
+        except Exception as e:
+            logger.warning(f"Gemini session report failed: {e}")
+
+    if not report_data:
+        # High quality telemetry fallback
+        critique_parts = []
+        if worst_overstay:
+            critique_parts.append(f"Overstayed on Slide {worst_overstay} by {max_overstay_pct:.0f}%")
+        if worst_rush:
+            critique_parts.append(f"rushed Slide {worst_rush} by {max_rush_pct:.0f}%")
+        
+        critique_str = ", ".join(critique_parts) if critique_parts else "Consistent rhythm maintained throughout all slides."
+
+        confidence = "Authoritative" if req.total_filler_words < 5 else "Conversational" if req.total_filler_words < 12 else "Hesitant"
+        flow_score = min(98, max(50, int(req.pacing_accuracy_percent * 0.75 + max(0, 25 - req.total_filler_words * 2))))
+
+        report_data = {
+            "flow_score": flow_score,
+            "filler_word_count": req.total_filler_words,
+            "pacing_critique": critique_str,
+            "confidence_rating": confidence,
+            "improvement_vs_benchmark": f"{max(15, 75 - req.total_filler_words * 4)}% cleaner delivery than baseline technical keynotes",
+            "actionable_coaching_cues": [
+                f"Calibrate pacing on Slide {worst_overstay or 1} to prevent compounding time constraints.",
+                "Embrace silent micro-pauses when transitioning between presentation concepts."
+            ]
+        }
+
+    report_data["pacing_accuracy_percent"] = req.pacing_accuracy_percent
+    return {"status": "success", "report": report_data}
