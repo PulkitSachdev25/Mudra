@@ -11,6 +11,7 @@ import {
 import { useMediaPipeGestures } from '../hooks/useMediaPipeGestures';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { soundEngine } from '../utils/soundEffects';
+import { getApiUrl } from '../config/api';
 
 export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onTriggerAirblast, onTriggerMOMSnap }) {
   const [deckType, setDeckType] = useState('sample'); // 'sample' | 'pdf'
@@ -144,7 +145,7 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
     const transcript = getRecentTranscript(60);
 
     try {
-      const res = await fetch('/api/summarize', {
+      const res = await fetch(getApiUrl('/api/summarize'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

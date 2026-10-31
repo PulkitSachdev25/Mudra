@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { getWebSocketUrl } from '../config/api';
 
 export function useRoomWebSocket({ roomCode, clientType, onMessage }) {
   const [isConnected, setIsConnected] = useState(false);
@@ -14,13 +15,10 @@ export function useRoomWebSocket({ roomCode, clientType, onMessage }) {
   const connect = useCallback(() => {
     if (!roomCode) return;
 
-    // Use current origin (host:port, e.g. 192.168.1.36:5173) proxied through Vite.
-    // This allows mobile phones and other devices on LAN to connect without Windows Firewall port 8000 blocking or SSL errors!
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const proxyWsUrl = `${protocol}//${window.location.host}/ws/${roomCode}/${clientType}`;
+    const wsUrl = getWebSocketUrl(roomCode, clientType);
 
-    console.log(`[WebSocket] Connecting to room ${roomCode} as ${clientType} via ${proxyWsUrl}`);
-    const ws = new WebSocket(proxyWsUrl);
+    console.log(`[WebSocket] Connecting to room ${roomCode} as ${clientType} via ${wsUrl}`);
+    const ws = new WebSocket(wsUrl);
     socketRef.current = ws;
 
     ws.onopen = () => {

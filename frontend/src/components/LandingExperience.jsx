@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Presentation, Users, Info, X, Hand, Share2, Camera } from 'lucide-react';
 import ScrambleText from './ScrambleText';
+import { getApiUrl } from '../config/api';
 
 function CornerCrosshairs() {
   return (
@@ -23,7 +24,7 @@ export default function LandingExperience({ onStartHost, onJoinAudience }) {
     setIsCreatingRoom(true);
     setErrorMsg('');
     try {
-      const res = await fetch('/api/rooms', {
+      const res = await fetch(getApiUrl('/api/rooms'), {
         method: 'POST',
       });
       if (!res.ok) throw new Error('Could not create room');
