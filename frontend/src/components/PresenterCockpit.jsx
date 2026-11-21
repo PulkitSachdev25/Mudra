@@ -489,6 +489,25 @@ export default function PresenterCockpit({ roomCode, onLeave, onSlideChange, onT
               <Copy className="w-3.5 h-3.5 text-zinc-400 group-hover:text-white transition-colors" />
             )}
           </button>
+
+          {/* Capybara Stage Co-Pilot Easter Egg Badge */}
+          <div
+            title="Capybara Stage Co-Pilot"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl transition-all cursor-default select-none hover:border-white/20 hover:bg-white/[0.04]"
+            style={{
+              backgroundColor: '#0A0A0A',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+            }}
+          >
+            <img
+              src="/capybara.png"
+              alt="Capybara Stage Co-Pilot"
+              className="w-6 h-6 rounded object-cover shrink-0 pointer-events-none select-none"
+            />
+            <span className="text-xs font-mono tracking-wider font-medium text-zinc-300">
+              CO-PILOT
+            </span>
+          </div>
         </div>
 
         {/* Right: The Minimal Frosted Status Square (NO text beside it, strictly as requested!) */}
